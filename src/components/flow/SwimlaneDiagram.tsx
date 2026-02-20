@@ -11,19 +11,23 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import { ViewId, WorkflowStep } from '@/data/types';
+import { ViewId, WorkflowStep, NodeShape } from '@/data/types';
 import { useEditableWorkflow } from '@/hooks/useEditableWorkflow';
 import { useEditMode } from '@/contexts/EditModeContext';
 import { ProcessNode } from './ProcessNode';
+import { ShapedNode } from './ShapedNode';
 import { LaneHeaderNode } from './LaneHeaderNode';
 import { CustomEdge } from './CustomEdge';
 import { SwimlaneBackground } from './SwimlaneBackground';
 import { NodeDetailPanel } from './NodeDetailPanel';
 import { EditModeToggle } from './EditModeToggle';
+import { ShapeToolbar } from '@/components/editing/ShapeToolbar';
+import { CanvasClickHandler } from '@/components/editing/CanvasClickHandler';
 import { COLUMN_GAP } from '@/styles/flow-theme';
 
 export const nodeTypes: NodeTypes = {
   processNode: ProcessNode,
+  shapedNode: ShapedNode,
   laneHeader: LaneHeaderNode,
 };
 
@@ -59,15 +63,22 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
     redo,
     canUndo,
     canRedo,
+    addStep,
     updateStep,
     deleteStep,
   } = useEditableWorkflow(viewId);
 
   const { isEditMode } = useEditMode();
   const [selectedStep, setSelectedStep] = useState<WorkflowStep | null>(null);
+  const [armedShape, setArmedShape] = useState<NodeShape | null>(null);
+
+  // Disarm shape when leaving edit mode
+  useEffect(() => {
+    if (!isEditMode) setArmedShape(null);
+  }, [isEditMode]);
 
   const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
-    if (node.type === 'processNode') {
+    if (node.type === 'processNode' || node.type === 'shapedNode') {
       setSelectedStep(node.data as unknown as WorkflowStep);
     }
   }, []);
@@ -141,6 +152,18 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
           zoomable
         />
       </ReactFlow>
+
+      {/* Shape toolbar */}
+      <ShapeToolbar armedShape={armedShape} onArmShape={setArmedShape} />
+
+      {/* Canvas click handler for placing shapes */}
+      {armedShape && (
+        <CanvasClickHandler
+          armedShape={armedShape}
+          onDisarm={() => setArmedShape(null)}
+          onAddStep={addStep}
+        />
+      )}
 
       {/* Edit mode toggle */}
       <div className="absolute top-3 right-3 z-20">

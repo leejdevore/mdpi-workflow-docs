@@ -1,4 +1,4 @@
-import { StepType } from '@/data/types';
+import type { StepType, NodeShape } from '@/data/types';
 
 /** Node dimensions */
 export const NODE_WIDTH = 220;
@@ -74,6 +74,18 @@ export const viewColors: Record<string, string> = {
   current: '#F59E0B',    // amber
   digitized: '#3B82F6',  // blue
   transformed: '#22C55E', // green
+};
+
+/** Shape dimensions for each node shape */
+export const shapeDimensions: Record<NodeShape, { width: number; height: number }> = {
+  process: { width: 220, height: 100 },
+  decision: { width: 200, height: 120 },
+  'start-end': { width: 180, height: 80 },
+  document: { width: 220, height: 110 },
+  data: { width: 220, height: 100 },
+  'manual-operation': { width: 220, height: 100 },
+  subprocess: { width: 220, height: 100 },
+  validation: { width: 200, height: 110 },
 };
 
 /** Phase colors for visual grouping */
