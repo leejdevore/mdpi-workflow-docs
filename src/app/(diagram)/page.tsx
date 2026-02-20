@@ -50,7 +50,7 @@ export default function DiagramPage() {
 
       {/* Diagram */}
       <div className="flex-1">
-        <ReactFlowProvider>
+        <ReactFlowProvider key={activeView}>
           <SwimlaneDiagram viewId={activeView} />
         </ReactFlowProvider>
       </div>
