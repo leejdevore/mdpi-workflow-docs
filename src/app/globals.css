@@ -35,3 +35,16 @@ body.slider-dragging {
   cursor: col-resize !important;
   user-select: none;
 }
+
+/* Shape placement mode cursor */
+.react-flow.shape-armed .react-flow__pane {
+  cursor: crosshair;
+}
+
+/* Selected node ring in edit mode */
+.react-flow__node.selected .react-flow__node-default,
+.react-flow__node.selected > div {
+  outline: 2px solid #3B82F6;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
