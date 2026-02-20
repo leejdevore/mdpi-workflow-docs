@@ -3,50 +3,38 @@
 import { useCallback, useState } from 'react';
 import {
   ReactFlow,
+  ReactFlowProvider,
   Controls,
   MiniMap,
   type NodeTypes,
-  type EdgeTypes,
   type Node,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import { ViewId, WorkflowStep } from '@/data/types';
-import { useWorkflowData } from '@/hooks/useWorkflowData';
-import { ProcessNode } from './ProcessNode';
-import { LaneHeaderNode } from './LaneHeaderNode';
-import { CustomEdge } from './CustomEdge';
-import { SwimlaneBackground } from './SwimlaneBackground';
-import { NodeDetailPanel } from './NodeDetailPanel';
+import type { WorkflowStep } from '@/data/types';
+import type { OverlayConfig } from '@/types/comparison';
+import { useOverlayData } from '@/hooks/useOverlayData';
+import { ProcessNode } from '@/components/flow/ProcessNode';
+import { LaneHeaderNode } from '@/components/flow/LaneHeaderNode';
+import { GhostProcessNode } from '@/components/flow/GhostProcessNode';
+import { CustomEdge } from '@/components/flow/CustomEdge';
+import { SwimlaneBackground } from '@/components/flow/SwimlaneBackground';
+import { NodeDetailPanel } from '@/components/flow/NodeDetailPanel';
+import { edgeTypes, sharedFlowProps } from '@/components/flow/SwimlaneDiagram';
 import { COLUMN_GAP } from '@/styles/flow-theme';
 
-export const nodeTypes: NodeTypes = {
+const overlayNodeTypes: NodeTypes = {
   processNode: ProcessNode,
   laneHeader: LaneHeaderNode,
+  ghostProcessNode: GhostProcessNode,
 };
 
-export const edgeTypes: EdgeTypes = {
-  customEdge: CustomEdge,
-};
-
-export const sharedFlowProps = {
-  fitView: true,
-  fitViewOptions: { padding: 0.1 },
-  minZoom: 0.1,
-  maxZoom: 2,
-  panOnScroll: true,
-  zoomOnScroll: true,
-  nodesDraggable: false,
-  nodesConnectable: false,
-} as const;
-
-interface SwimlaneDiagramProps {
-  viewId: ViewId;
-  className?: string;
+interface OverlayDiagramProps {
+  config: OverlayConfig;
 }
 
-export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
-  const { nodes, edges, lanePositions } = useWorkflowData(viewId);
+function OverlayDiagramInner({ config }: OverlayDiagramProps) {
+  const { nodes, edges, lanePositions } = useOverlayData(config);
   const [selectedStep, setSelectedStep] = useState<WorkflowStep | null>(null);
 
   const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
@@ -59,27 +47,22 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
     setSelectedStep(null);
   }, []);
 
-  // Estimate total width from the max column
-  const maxColumn = Math.max(...nodes.filter(n => n.type === 'processNode').map(n => (n.data as unknown as WorkflowStep).column ?? 0), 0);
+  const maxColumn = Math.max(
+    ...nodes.filter((n) => n.type === 'processNode' || n.type === 'ghostProcessNode').map((n) => (n.data as unknown as WorkflowStep).column ?? 0),
+    0
+  );
   const totalWidth = (maxColumn + 2) * COLUMN_GAP;
 
   return (
-    <div className={`relative w-full h-full ${className ?? ''}`}>
+    <div className="relative w-full h-full">
       <ReactFlow
         nodes={nodes}
         edges={edges}
-        nodeTypes={nodeTypes}
+        nodeTypes={overlayNodeTypes}
         edgeTypes={edgeTypes}
         onNodeClick={handleNodeClick}
         onPaneClick={handlePaneClick}
-        fitView
-        fitViewOptions={{ padding: 0.1 }}
-        minZoom={0.1}
-        maxZoom={2}
-        panOnScroll
-        zoomOnScroll
-        nodesDraggable={false}
-        nodesConnectable={false}
+        {...sharedFlowProps}
       >
         <SwimlaneBackground lanePositions={lanePositions} totalWidth={totalWidth} />
         <Controls className="!bottom-4 !left-4" />
@@ -91,7 +74,6 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
         />
       </ReactFlow>
 
-      {/* Detail panel overlay */}
       {selectedStep && (
         <>
           <div
@@ -102,5 +84,13 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
         </>
       )}
     </div>
+  );
+}
+
+export function OverlayDiagram({ config }: OverlayDiagramProps) {
+  return (
+    <ReactFlowProvider key={`overlay-${config.primaryView}-${config.ghostViews.join(',')}`}>
+      <OverlayDiagramInner config={config} />
+    </ReactFlowProvider>
   );
 }

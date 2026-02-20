@@ -65,6 +65,17 @@ export function getTotalImpactColor(total: number): string {
   return '#EF4444';
 }
 
+/** Ghost overlay styling */
+export const GHOST_OPACITY = 0.2;
+export const GHOST_SATURATION = 0.1;
+
+/** View identity colors (for labels and badges) */
+export const viewColors: Record<string, string> = {
+  current: '#F59E0B',    // amber
+  digitized: '#3B82F6',  // blue
+  transformed: '#22C55E', // green
+};
+
 /** Phase colors for visual grouping */
 export const phaseColors: Record<string, string> = {
   'pre-draw': '#F1F5F9',
