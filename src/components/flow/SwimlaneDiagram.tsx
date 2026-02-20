@@ -8,6 +8,7 @@ import {
   type NodeTypes,
   type EdgeTypes,
   type Node,
+  type Edge,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -19,7 +20,10 @@ import { LaneHeaderNode } from './LaneHeaderNode';
 import { CustomEdge } from './CustomEdge';
 import { SwimlaneBackground } from './SwimlaneBackground';
 import { NodeDetailPanel } from './NodeDetailPanel';
+import { NodeDetailEditPanel } from './NodeDetailEditPanel';
 import { EditModeToggle } from './EditModeToggle';
+import { EdgeEditPopover } from '@/components/editing/EdgeEditPopover';
+import { DeleteConfirmDialog } from '@/components/editing/DeleteConfirmDialog';
 import { COLUMN_GAP } from '@/styles/flow-theme';
 
 export const nodeTypes: NodeTypes = {
@@ -47,6 +51,17 @@ interface SwimlaneDiagramProps {
   className?: string;
 }
 
+interface DeleteTarget {
+  id: string;
+  name: string;
+  connectedEdgeCount: number;
+}
+
+interface EditingEdge {
+  edge: Edge;
+  position: { x: number; y: number };
+}
+
 export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
   const {
     nodes,
@@ -61,20 +76,91 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
     canRedo,
     updateStep,
     deleteStep,
+    updateEdge,
+    deleteEdge,
   } = useEditableWorkflow(viewId);
 
   const { isEditMode } = useEditMode();
   const [selectedStep, setSelectedStep] = useState<WorkflowStep | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [editingEdge, setEditingEdge] = useState<EditingEdge | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+
+  // Close panels when leaving edit mode
+  useEffect(() => {
+    if (!isEditMode) {
+      setEditingEdge(null);
+      setDeleteTarget(null);
+    }
+  }, [isEditMode]);
 
   const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     if (node.type === 'processNode') {
       setSelectedStep(node.data as unknown as WorkflowStep);
+      setSelectedNodeId(node.id);
     }
   }, []);
 
+  const handleNodeDoubleClick = useCallback(
+    (_event: React.MouseEvent, node: Node) => {
+      if (!isEditMode) return;
+      if (node.type === 'processNode') {
+        setSelectedStep(node.data as unknown as WorkflowStep);
+        setSelectedNodeId(node.id);
+      }
+    },
+    [isEditMode]
+  );
+
+  const handleEdgeClick = useCallback(
+    (event: React.MouseEvent, edge: Edge) => {
+      if (!isEditMode) return;
+      setEditingEdge({
+        edge,
+        position: { x: event.clientX, y: event.clientY },
+      });
+    },
+    [isEditMode]
+  );
+
   const handlePaneClick = useCallback(() => {
     setSelectedStep(null);
+    setSelectedNodeId(null);
+    setEditingEdge(null);
   }, []);
+
+  // Handle save from edit panel
+  const handleEditSave = useCallback(
+    (updates: Partial<WorkflowStep>) => {
+      if (selectedNodeId) {
+        updateStep(selectedNodeId, updates);
+      }
+    },
+    [selectedNodeId, updateStep]
+  );
+
+  // Handle delete from edit panel
+  const handleEditDelete = useCallback(() => {
+    if (!selectedNodeId || !selectedStep) return;
+    const connectedEdgeCount = edges.filter(
+      (e) => e.source === selectedNodeId || e.target === selectedNodeId
+    ).length;
+    setDeleteTarget({
+      id: selectedNodeId,
+      name: selectedStep.title,
+      connectedEdgeCount,
+    });
+  }, [selectedNodeId, selectedStep, edges]);
+
+  // Confirm deletion
+  const handleConfirmDelete = useCallback(() => {
+    if (deleteTarget) {
+      deleteStep(deleteTarget.id);
+      setDeleteTarget(null);
+      setSelectedStep(null);
+      setSelectedNodeId(null);
+    }
+  }, [deleteTarget, deleteStep]);
 
   // Keyboard shortcuts for undo/redo
   useEffect(() => {
@@ -115,6 +201,8 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodeClick={handleNodeClick}
+        onNodeDoubleClick={handleNodeDoubleClick}
+        onEdgeClick={handleEdgeClick}
         onPaneClick={handlePaneClick}
         onNodesChange={isEditMode ? onNodesChange : undefined}
         onEdgesChange={isEditMode ? onEdgesChange : undefined}
@@ -152,14 +240,56 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
         />
       </div>
 
-      {/* Detail panel overlay */}
+      {/* Edge edit popover */}
+      {editingEdge && (
+        <EdgeEditPopover
+          edge={editingEdge.edge}
+          position={editingEdge.position}
+          onSave={updateEdge}
+          onDelete={deleteEdge}
+          onClose={() => setEditingEdge(null)}
+        />
+      )}
+
+      {/* Delete confirmation dialog */}
+      {deleteTarget && (
+        <DeleteConfirmDialog
+          name={deleteTarget.name}
+          connectedEdgeCount={deleteTarget.connectedEdgeCount}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+
+      {/* Detail panel overlay — edit or view mode */}
       {selectedStep && (
         <>
           <div
             className="fixed inset-0 bg-black/20 z-40"
-            onClick={() => setSelectedStep(null)}
+            onClick={() => {
+              setSelectedStep(null);
+              setSelectedNodeId(null);
+            }}
           />
-          <NodeDetailPanel step={selectedStep} onClose={() => setSelectedStep(null)} />
+          {isEditMode ? (
+            <NodeDetailEditPanel
+              step={selectedStep}
+              onSave={handleEditSave}
+              onDelete={handleEditDelete}
+              onClose={() => {
+                setSelectedStep(null);
+                setSelectedNodeId(null);
+              }}
+            />
+          ) : (
+            <NodeDetailPanel
+              step={selectedStep}
+              onClose={() => {
+                setSelectedStep(null);
+                setSelectedNodeId(null);
+              }}
+            />
+          )}
         </>
       )}
     </div>

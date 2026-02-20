@@ -37,6 +37,16 @@ function CustomEdgeComponent({
   return (
     <>
       <BaseEdge id={id} path={edgePath} style={style} />
+      {/* Wider invisible hit area for clicking in edit mode */}
+      {isEditMode && (
+        <path
+          d={edgePath}
+          fill="none"
+          stroke="transparent"
+          strokeWidth={20}
+          className="cursor-pointer"
+        />
+      )}
       {label && (
         <EdgeLabelRenderer>
           <div
