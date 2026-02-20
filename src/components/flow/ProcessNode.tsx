@@ -4,10 +4,12 @@ import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { FileText } from 'lucide-react';
 import type { ProcessNodeData } from '@/hooks/useWorkflowData';
+import { useEditMode } from '@/contexts/EditModeContext';
 import { stepTypeColors, getImpactColor, getTotalImpactColor } from '@/styles/flow-theme';
 
 function ProcessNodeComponent({ data }: NodeProps) {
   const nodeData = data as unknown as ProcessNodeData;
+  const { isEditMode } = useEditMode();
   const colors = stepTypeColors[nodeData.stepType];
   const impact = nodeData.impact;
   const totalImpact = impact ? impact.consistency + impact.cost + impact.control : null;
@@ -22,7 +24,11 @@ function ProcessNodeComponent({ data }: NodeProps) {
         height: '100%',
       }}
     >
-      <Handle type="target" position={Position.Left} className="!w-2 !h-2 !bg-slate-400" />
+      <Handle
+        type="target"
+        position={Position.Left}
+        className={isEditMode ? '!w-3 !h-3 !bg-blue-500 !border-2 !border-white' : '!w-2 !h-2 !bg-slate-400'}
+      />
 
       <div className="flex items-start gap-2">
         {nodeData.stepNumber != null && (
@@ -72,7 +78,11 @@ function ProcessNodeComponent({ data }: NodeProps) {
         </div>
       )}
 
-      <Handle type="source" position={Position.Right} className="!w-2 !h-2 !bg-slate-400" />
+      <Handle
+        type="source"
+        position={Position.Right}
+        className={isEditMode ? '!w-3 !h-3 !bg-blue-500 !border-2 !border-white' : '!w-2 !h-2 !bg-slate-400'}
+      />
     </div>
   );
 }

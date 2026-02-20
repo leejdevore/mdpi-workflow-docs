@@ -9,6 +9,7 @@ import { OverlayDiagram } from '@/components/comparison/OverlayDiagram';
 import { SliderControls } from '@/components/comparison/SliderControls';
 import { SliderDiagram } from '@/components/comparison/SliderDiagram';
 import { useComparisonState } from '@/hooks/useComparisonState';
+import { EditModeProvider } from '@/contexts/EditModeContext';
 import { ViewId } from '@/data/types';
 import { getWorkflowView, getAllViewIds } from '@/data';
 
@@ -41,6 +42,7 @@ export default function DiagramPage() {
   }, [sliderConfig.leftView, sliderConfig.rightView, setSliderLeftView, setSliderRightView]);
 
   return (
+    <EditModeProvider viewMode={viewMode}>
     <div className="flex flex-col h-full">
       {/* Control bar */}
       <div className="flex items-center justify-between gap-2 px-4 pt-3 pb-2 bg-slate-50 border-b border-slate-200">
@@ -117,5 +119,6 @@ export default function DiagramPage() {
         )}
       </div>
     </div>
+    </EditModeProvider>
   );
 }

@@ -13,6 +13,9 @@ export type ActorId =
 /** Classification of a step's nature */
 export type StepType = 'manual' | 'automated' | 'data-driven' | 'hybrid';
 
+/** Workflow shape types for visual representation */
+export type NodeShape = 'process' | 'decision' | 'document' | 'data' | 'start-end' | 'manual-operation' | 'subprocess' | 'validation';
+
 /** Process phases / sections */
 export type ProcessPhase =
   | 'pre-draw'
@@ -63,6 +66,8 @@ export interface WorkflowStep {
   branch?: 'check' | 'ach';
   /** Sub-items for steps with detailed lists */
   subItems?: string[];
+  /** Visual shape override */
+  shape?: NodeShape;
   /** Impact assessment scores (each 1-5). Total Change Impact = sum (3-15) */
   impact?: ImpactScore;
 }

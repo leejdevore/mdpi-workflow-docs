@@ -7,6 +7,7 @@ import {
   type EdgeProps,
   EdgeLabelRenderer,
 } from '@xyflow/react';
+import { useEditMode } from '@/contexts/EditModeContext';
 
 function CustomEdgeComponent({
   id,
@@ -21,6 +22,8 @@ function CustomEdgeComponent({
   labelStyle,
   labelBgStyle,
 }: EdgeProps) {
+  const { isEditMode } = useEditMode();
+
   const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
     sourceY,
@@ -37,7 +40,7 @@ function CustomEdgeComponent({
       {label && (
         <EdgeLabelRenderer>
           <div
-            className="absolute pointer-events-none px-1.5 py-0.5 rounded text-[10px]"
+            className={`absolute px-1.5 py-0.5 rounded text-[10px] ${isEditMode ? 'pointer-events-auto cursor-pointer hover:ring-2 hover:ring-blue-400' : 'pointer-events-none'}`}
             style={{
               transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
               ...labelBgStyle,

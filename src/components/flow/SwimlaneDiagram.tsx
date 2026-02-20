@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ReactFlow,
   Controls,
@@ -12,12 +12,14 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import { ViewId, WorkflowStep } from '@/data/types';
-import { useWorkflowData } from '@/hooks/useWorkflowData';
+import { useEditableWorkflow } from '@/hooks/useEditableWorkflow';
+import { useEditMode } from '@/contexts/EditModeContext';
 import { ProcessNode } from './ProcessNode';
 import { LaneHeaderNode } from './LaneHeaderNode';
 import { CustomEdge } from './CustomEdge';
 import { SwimlaneBackground } from './SwimlaneBackground';
 import { NodeDetailPanel } from './NodeDetailPanel';
+import { EditModeToggle } from './EditModeToggle';
 import { COLUMN_GAP } from '@/styles/flow-theme';
 
 export const nodeTypes: NodeTypes = {
@@ -46,7 +48,22 @@ interface SwimlaneDiagramProps {
 }
 
 export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
-  const { nodes, edges, lanePositions } = useWorkflowData(viewId);
+  const {
+    nodes,
+    edges,
+    lanePositions,
+    onNodesChange,
+    onEdgesChange,
+    onConnect,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    updateStep,
+    deleteStep,
+  } = useEditableWorkflow(viewId);
+
+  const { isEditMode } = useEditMode();
   const [selectedStep, setSelectedStep] = useState<WorkflowStep | null>(null);
 
   const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
@@ -59,12 +76,39 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
     setSelectedStep(null);
   }, []);
 
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    if (!isEditMode) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isEditMode, undo, redo]);
+
   // Estimate total width from the max column
-  const maxColumn = Math.max(...nodes.filter(n => n.type === 'processNode').map(n => (n.data as unknown as WorkflowStep).column ?? 0), 0);
+  const maxColumn = Math.max(
+    ...nodes.filter((n) => n.type === 'processNode').map((n) => (n.data as unknown as WorkflowStep).column ?? 0),
+    0
+  );
   const totalWidth = (maxColumn + 2) * COLUMN_GAP;
 
   return (
     <div className={`relative w-full h-full ${className ?? ''}`}>
+      {/* Edit mode indicator ring */}
+      {isEditMode && (
+        <div className="absolute inset-0 border-2 border-amber-400 rounded-lg pointer-events-none z-10" />
+      )}
+
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -72,14 +116,21 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
         edgeTypes={edgeTypes}
         onNodeClick={handleNodeClick}
         onPaneClick={handlePaneClick}
+        onNodesChange={isEditMode ? onNodesChange : undefined}
+        onEdgesChange={isEditMode ? onEdgesChange : undefined}
+        onConnect={isEditMode ? onConnect : undefined}
         fitView
         fitViewOptions={{ padding: 0.1 }}
         minZoom={0.1}
         maxZoom={2}
         panOnScroll
         zoomOnScroll
-        nodesDraggable={false}
-        nodesConnectable={false}
+        nodesDraggable={isEditMode}
+        nodesConnectable={isEditMode}
+        elementsSelectable={isEditMode}
+        deleteKeyCode={isEditMode ? 'Backspace' : null}
+        snapToGrid={isEditMode}
+        snapGrid={[70, 25]}
       >
         <SwimlaneBackground lanePositions={lanePositions} totalWidth={totalWidth} />
         <Controls className="!bottom-4 !left-4" />
@@ -90,6 +141,16 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
           zoomable
         />
       </ReactFlow>
+
+      {/* Edit mode toggle */}
+      <div className="absolute top-3 right-3 z-20">
+        <EditModeToggle
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onUndo={undo}
+          onRedo={redo}
+        />
+      </div>
 
       {/* Detail panel overlay */}
       {selectedStep && (
