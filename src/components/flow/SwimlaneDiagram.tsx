@@ -16,8 +16,8 @@ import { ViewId, WorkflowStep, NodeShape } from '@/data/types';
 import { useEditableWorkflow } from '@/hooks/useEditableWorkflow';
 import { useEditMode } from '@/contexts/EditModeContext';
 import { ProcessNode } from './ProcessNode';
-import { ShapedNode } from './ShapedNode';
 import { LaneHeaderNode } from './LaneHeaderNode';
+import { PhaseHeaderNode } from './PhaseHeaderNode';
 import { CustomEdge } from './CustomEdge';
 import { SwimlaneBackground } from './SwimlaneBackground';
 import { NodeDetailPanel } from './NodeDetailPanel';
@@ -31,8 +31,8 @@ import { COLUMN_GAP } from '@/styles/flow-theme';
 
 export const nodeTypes: NodeTypes = {
   processNode: ProcessNode,
-  shapedNode: ShapedNode,
   laneHeader: LaneHeaderNode,
+  phaseHeader: PhaseHeaderNode,
 };
 
 export const edgeTypes: EdgeTypes = {
@@ -71,6 +71,7 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
     nodes,
     edges,
     lanePositions,
+    phasePositions,
     onNodesChange,
     onEdgesChange,
     onConnect,
@@ -102,7 +103,7 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
   }, [isEditMode]);
 
   const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
-    if (node.type === 'processNode' || node.type === 'shapedNode') {
+    if (node.type === 'processNode') {
       setSelectedStep(node.data as unknown as WorkflowStep);
       setSelectedNodeId(node.id);
     }
@@ -111,7 +112,7 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
   const handleNodeDoubleClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
       if (!isEditMode) return;
-      if (node.type === 'processNode' || node.type === 'shapedNode') {
+      if (node.type === 'processNode') {
         setSelectedStep(node.data as unknown as WorkflowStep);
         setSelectedNodeId(node.id);
       }
@@ -131,8 +132,7 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
   );
 
   const handlePaneClick = useCallback(() => {
-    setSelectedStep(null);
-    setSelectedNodeId(null);
+    // Keep the panel open (sticky) — only close via panel's X button
     setEditingEdge(null);
   }, []);
 
@@ -190,7 +190,7 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
 
   // Estimate total width from the max column
   const maxColumn = Math.max(
-    ...nodes.filter((n) => n.type === 'processNode' || n.type === 'shapedNode').map((n) => (n.data as unknown as WorkflowStep).column ?? 0),
+    ...nodes.filter((n) => n.type === 'processNode').map((n) => (n.data as unknown as WorkflowStep).column ?? 0),
     0
   );
   const totalWidth = (maxColumn + 2) * COLUMN_GAP;
@@ -227,7 +227,7 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
         snapToGrid={isEditMode}
         snapGrid={[70, 25]}
       >
-        <SwimlaneBackground lanePositions={lanePositions} totalWidth={totalWidth} />
+        <SwimlaneBackground lanePositions={lanePositions} phasePositions={phasePositions} totalWidth={totalWidth} />
         <Controls className="!bottom-4 !left-4" />
         <MiniMap
           className="!bottom-4 !right-4"
@@ -280,36 +280,31 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
         />
       )}
 
-      {/* Detail panel overlay — edit or view mode */}
+      {/* Detail panel — sticky, no backdrop, closes via X button only */}
       {selectedStep && (
-        <>
-          <div
-            className="fixed inset-0 bg-black/20 z-40"
-            onClick={() => {
-              setSelectedStep(null);
-              setSelectedNodeId(null);
-            }}
-          />
-          {isEditMode ? (
-            <NodeDetailEditPanel
-              step={selectedStep}
-              onSave={handleEditSave}
-              onDelete={handleEditDelete}
-              onClose={() => {
-                setSelectedStep(null);
-                setSelectedNodeId(null);
-              }}
-            />
-          ) : (
-            <NodeDetailPanel
-              step={selectedStep}
-              onClose={() => {
-                setSelectedStep(null);
-                setSelectedNodeId(null);
-              }}
-            />
-          )}
-        </>
+        <div className="pointer-events-none fixed right-0 top-0 h-full z-50">
+          <div className="pointer-events-auto h-full">
+            {isEditMode ? (
+              <NodeDetailEditPanel
+                step={selectedStep}
+                onSave={handleEditSave}
+                onDelete={handleEditDelete}
+                onClose={() => {
+                  setSelectedStep(null);
+                  setSelectedNodeId(null);
+                }}
+              />
+            ) : (
+              <NodeDetailPanel
+                step={selectedStep}
+                onClose={() => {
+                  setSelectedStep(null);
+                  setSelectedNodeId(null);
+                }}
+              />
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

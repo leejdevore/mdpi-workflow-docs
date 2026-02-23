@@ -25,7 +25,7 @@ interface WorkflowSnapshot {
 }
 
 export function useEditableWorkflow(viewId: ViewId) {
-  const { nodes: initialNodes, edges: initialEdges, lanePositions } = useWorkflowData(viewId);
+  const { nodes: initialNodes, edges: initialEdges, lanePositions, phasePositions } = useWorkflowData(viewId);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const initialized = useRef(false);
@@ -159,7 +159,7 @@ export function useEditableWorkflow(viewId: ViewId) {
   const addStep = useCallback(
     (step: WorkflowStep, position: { x: number; y: number }) => {
       takeSnapshot();
-      const nodeType = step.shape && step.shape !== 'process' ? 'shapedNode' : 'processNode';
+      const nodeType = 'processNode';
       const dims = step.shape ? shapeDimensions[step.shape] : shapeDimensions.process;
       const newNode: Node = {
         id: step.id,
@@ -181,7 +181,7 @@ export function useEditableWorkflow(viewId: ViewId) {
           if (node.id !== nodeId) return node;
           const updatedData = { ...node.data, ...updates };
           const shape = updates.shape ?? (node.data as unknown as WorkflowStep).shape;
-          const nodeType = shape && shape !== 'process' ? 'shapedNode' : 'processNode';
+          const nodeType = 'processNode';
           const dims = shape ? shapeDimensions[shape] : shapeDimensions.process;
           return {
             ...node,
@@ -245,6 +245,7 @@ export function useEditableWorkflow(viewId: ViewId) {
     nodes,
     edges,
     lanePositions,
+    phasePositions,
     onNodesChange: handleNodesChange,
     onEdgesChange: handleEdgesChange,
     onConnect: handleConnect,

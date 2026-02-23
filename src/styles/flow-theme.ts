@@ -88,6 +88,9 @@ export const shapeDimensions: Record<NodeShape, { width: number; height: number 
   validation: { width: 200, height: 110 },
 };
 
+/** Phase header dimensions */
+export const PHASE_HEADER_HEIGHT = 50;
+
 /** Phase colors for visual grouping */
 export const phaseColors: Record<string, string> = {
   'pre-draw': '#F1F5F9',
@@ -98,4 +101,16 @@ export const phaseColors: Record<string, string> = {
   'post-approval': '#D1FAE5',
   'payment-check': '#FEE2E2',
   'payment-ach': '#DCFCE7',
+};
+
+/** Readable phase labels */
+export const phaseLabels: Record<string, string> = {
+  'pre-draw': 'Pre-Draw',
+  'invoice-receipt': 'Invoice Receipt',
+  'invoice-processing': 'Invoice Processing',
+  'invoice-tabulation': 'Invoice Tabulation',
+  'draw-assembly': 'Draw Assembly',
+  'post-approval': 'Post-Approval',
+  'payment-check': 'Payment (Check)',
+  'payment-ach': 'Payment (ACH)',
 };

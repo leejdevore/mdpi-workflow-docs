@@ -10,6 +10,8 @@ import { SliderControls } from '@/components/comparison/SliderControls';
 import { SliderDiagram } from '@/components/comparison/SliderDiagram';
 import { useComparisonState } from '@/hooks/useComparisonState';
 import { EditModeProvider } from '@/contexts/EditModeContext';
+import { Header } from '@/components/layout/Header';
+import { useWorkflowManager } from '@/hooks/useWorkflowManager';
 import { ViewId } from '@/data/types';
 import { getWorkflowView, getAllViewIds } from '@/data';
 
@@ -20,6 +22,15 @@ const viewLabels: Record<ViewId, string> = {
 };
 
 export default function DiagramPage() {
+  const {
+    workflows,
+    activeWorkflowId,
+    activeViewId,
+    createWorkflow,
+    deleteWorkflow,
+    switchWorkflow,
+  } = useWorkflowManager();
+
   const {
     viewMode,
     setViewMode,
@@ -41,9 +52,23 @@ export default function DiagramPage() {
     setSliderRightView(left);
   }, [sliderConfig.leftView, sliderConfig.rightView, setSliderLeftView, setSliderRightView]);
 
+  // Use the workflow manager's active view for the diagram
+  const currentViewId = activeViewId;
+
   return (
     <EditModeProvider viewMode={viewMode}>
     <div className="flex flex-col h-full">
+      {/* Header with workflow selector */}
+      <Header
+        title="Draw Process Workflow"
+        subtitle="Real Estate Development"
+        workflows={workflows}
+        activeWorkflowId={activeWorkflowId}
+        onSwitchWorkflow={switchWorkflow}
+        onCreateWorkflow={createWorkflow}
+        onDeleteWorkflow={deleteWorkflow}
+      />
+
       {/* Control bar */}
       <div className="flex items-center justify-between gap-2 px-4 pt-3 pb-2 bg-slate-50 border-b border-slate-200">
         {/* Left side: mode-specific controls */}

@@ -111,7 +111,7 @@ export function NodeDetailEditPanel({ step, onSave, onDelete, onClose }: NodeDet
   }, [title, description, stepType, actor, phase, stepNumber, documents, painPoints, improvements, toolsUsed, subItems, impact, onSave, onClose]);
 
   return (
-    <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl border-l border-slate-200 z-50 overflow-y-auto">
+    <div className="h-full w-96 bg-white shadow-2xl border-l border-slate-200 overflow-y-auto">
       {/* Header */}
       <div
         className="sticky top-0 p-4 border-b z-10"

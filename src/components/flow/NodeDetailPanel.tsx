@@ -23,7 +23,7 @@ export function NodeDetailPanel({ step, onClose }: NodeDetailPanelProps) {
   const totalImpact = impact ? impact.consistency + impact.cost + impact.control : null;
 
   return (
-    <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl border-l border-slate-200 z-50 overflow-y-auto transition-transform">
+    <div className="h-full w-96 bg-white shadow-2xl border-l border-slate-200 overflow-y-auto transition-transform">
       {/* Header */}
       <div
         className="sticky top-0 p-4 border-b"

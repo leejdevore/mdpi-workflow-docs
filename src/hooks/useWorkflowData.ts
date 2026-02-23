@@ -5,7 +5,9 @@ import { Node, Edge } from '@xyflow/react';
 import { ViewId, WorkflowStep } from '@/data/types';
 import { getWorkflowView } from '@/data';
 import { getActorY, getFlowStartX, getLanePositions } from '@/lib/swimlane-positions';
-import { COLUMN_GAP, NODE_WIDTH, NODE_HEIGHT, BRANCH_OFFSET_Y, LANE_HEIGHT, shapeDimensions } from '@/styles/flow-theme';
+import { getPhasePositions, type PhasePosition } from '@/lib/phase-positions';
+import { COLUMN_GAP, NODE_WIDTH, NODE_HEIGHT, BRANCH_OFFSET_Y, LANE_HEIGHT, PHASE_HEADER_HEIGHT, shapeDimensions } from '@/styles/flow-theme';
+import type { PhaseHeaderData } from '@/components/flow/PhaseHeaderNode';
 
 export interface ProcessNodeData extends WorkflowStep {
   [key: string]: unknown;
@@ -23,12 +25,32 @@ export function useWorkflowData(viewId: ViewId) {
     const view = getWorkflowView(viewId);
     const flowStartX = getFlowStartX();
     const lanePositions = getLanePositions();
+    const phasePositions = getPhasePositions(view.steps);
 
-    // Create lane header nodes
+    // Vertical offset: everything shifts down to make room for phase headers
+    const yOffset = PHASE_HEADER_HEIGHT;
+
+    // Create phase header nodes (positioned above the lanes)
+    const phaseNodes: Node[] = phasePositions.map((phase) => ({
+      id: `phase-header-${phase.phaseId}`,
+      type: 'phaseHeader',
+      position: { x: phase.x, y: 0 },
+      data: {
+        label: phase.label,
+        color: phase.color,
+        phaseWidth: phase.width,
+      } satisfies PhaseHeaderData,
+      draggable: false,
+      selectable: false,
+      connectable: false,
+      style: { width: phase.width, height: PHASE_HEADER_HEIGHT },
+    }));
+
+    // Create lane header nodes (shifted down by yOffset)
     const laneNodes: Node[] = lanePositions.map((lane) => ({
       id: `lane-header-${lane.laneId}`,
       type: 'laneHeader',
-      position: { x: 0, y: lane.y },
+      position: { x: 0, y: lane.y + yOffset },
       data: {
         label: lane.label,
         shortLabel: lane.shortLabel,
@@ -40,22 +62,21 @@ export function useWorkflowData(viewId: ViewId) {
       style: { width: 180, height: LANE_HEIGHT },
     }));
 
-    // Create process nodes from workflow steps
+    // Create process nodes from workflow steps (shifted down by yOffset)
     const processNodes: Node[] = view.steps.map((step) => {
       const baseY = getActorY(step.actor);
-      let y = baseY;
+      let y = baseY + yOffset;
 
       // Offset branches within their lane
       if (step.branch === 'ach') {
         y += BRANCH_OFFSET_Y;
       }
 
-      const nodeType = step.shape && step.shape !== 'process' ? 'shapedNode' : 'processNode';
       const dims = step.shape && step.shape !== 'process' ? shapeDimensions[step.shape] : { width: NODE_WIDTH, height: NODE_HEIGHT };
 
       return {
         id: step.id,
-        type: nodeType,
+        type: 'processNode',
         position: {
           x: flowStartX + step.column * COLUMN_GAP,
           y,
@@ -89,9 +110,10 @@ export function useWorkflowData(viewId: ViewId) {
     }));
 
     return {
-      nodes: [...laneNodes, ...processNodes],
+      nodes: [...phaseNodes, ...laneNodes, ...processNodes],
       edges: flowEdges,
       lanePositions,
+      phasePositions,
     };
   }, [viewId]);
 }
