@@ -16,6 +16,8 @@ import {
 import type { ViewId, WorkflowStep } from '@/data/types';
 import { useWorkflowData } from './useWorkflowData';
 import { useUndoRedo } from './useUndoRedo';
+import { shapeDimensions } from '@/styles/flow-theme';
+import { getActorForY } from '@/lib/swimlane-positions';
 
 interface WorkflowSnapshot {
   nodes: Node[];
@@ -97,8 +99,29 @@ export function useEditableWorkflow(viewId: ViewId) {
         takeSnapshot();
       }
       onNodesChange(changes);
+
+      // Detect lane crossing on drag-end and auto-update actor
+      for (const c of changes) {
+        if (c.type === 'position' && c.dragging === false && c.position) {
+          const node = nodes.find((n) => n.id === c.id);
+          if (!node || node.type === 'laneHeader') continue;
+
+          const currentActor = (node.data as unknown as WorkflowStep).actor;
+          const newActor = getActorForY(c.position.y);
+
+          if (newActor && newActor !== currentActor) {
+            setNodes((nds) =>
+              nds.map((n) =>
+                n.id === c.id
+                  ? { ...n, data: { ...n.data, actor: newActor } }
+                  : n
+              )
+            );
+          }
+        }
+      }
     },
-    [onNodesChange, takeSnapshot]
+    [onNodesChange, takeSnapshot, nodes, setNodes]
   );
 
   // Edge changes from React Flow
@@ -136,12 +159,14 @@ export function useEditableWorkflow(viewId: ViewId) {
   const addStep = useCallback(
     (step: WorkflowStep, position: { x: number; y: number }) => {
       takeSnapshot();
+      const nodeType = step.shape && step.shape !== 'process' ? 'shapedNode' : 'processNode';
+      const dims = step.shape ? shapeDimensions[step.shape] : shapeDimensions.process;
       const newNode: Node = {
         id: step.id,
-        type: 'processNode',
+        type: nodeType,
         position,
         data: { ...step },
-        style: { width: 220, height: 100 },
+        style: { width: dims.width, height: dims.height },
       };
       setNodes((nds) => [...nds, newNode]);
     },
@@ -152,11 +177,19 @@ export function useEditableWorkflow(viewId: ViewId) {
     (nodeId: string, updates: Partial<WorkflowStep>) => {
       takeSnapshot();
       setNodes((nds) =>
-        nds.map((node) =>
-          node.id === nodeId
-            ? { ...node, data: { ...node.data, ...updates } }
-            : node
-        )
+        nds.map((node) => {
+          if (node.id !== nodeId) return node;
+          const updatedData = { ...node.data, ...updates };
+          const shape = updates.shape ?? (node.data as unknown as WorkflowStep).shape;
+          const nodeType = shape && shape !== 'process' ? 'shapedNode' : 'processNode';
+          const dims = shape ? shapeDimensions[shape] : shapeDimensions.process;
+          return {
+            ...node,
+            type: nodeType,
+            data: updatedData,
+            style: { width: dims.width, height: dims.height },
+          };
+        })
       );
     },
     [setNodes, takeSnapshot]

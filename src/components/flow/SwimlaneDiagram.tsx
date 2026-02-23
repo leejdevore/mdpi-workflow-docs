@@ -111,7 +111,7 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
   const handleNodeDoubleClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
       if (!isEditMode) return;
-      if (node.type === 'processNode') {
+      if (node.type === 'processNode' || node.type === 'shapedNode') {
         setSelectedStep(node.data as unknown as WorkflowStep);
         setSelectedNodeId(node.id);
       }
@@ -190,7 +190,7 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
 
   // Estimate total width from the max column
   const maxColumn = Math.max(
-    ...nodes.filter((n) => n.type === 'processNode').map((n) => (n.data as unknown as WorkflowStep).column ?? 0),
+    ...nodes.filter((n) => n.type === 'processNode' || n.type === 'shapedNode').map((n) => (n.data as unknown as WorkflowStep).column ?? 0),
     0
   );
   const totalWidth = (maxColumn + 2) * COLUMN_GAP;

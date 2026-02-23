@@ -5,7 +5,7 @@ import { Node, Edge } from '@xyflow/react';
 import { ViewId, WorkflowStep } from '@/data/types';
 import { getWorkflowView } from '@/data';
 import { getActorY, getFlowStartX, getLanePositions } from '@/lib/swimlane-positions';
-import { COLUMN_GAP, NODE_WIDTH, NODE_HEIGHT, BRANCH_OFFSET_Y, LANE_HEIGHT } from '@/styles/flow-theme';
+import { COLUMN_GAP, NODE_WIDTH, NODE_HEIGHT, BRANCH_OFFSET_Y, LANE_HEIGHT, shapeDimensions } from '@/styles/flow-theme';
 
 export interface ProcessNodeData extends WorkflowStep {
   [key: string]: unknown;
@@ -50,15 +50,18 @@ export function useWorkflowData(viewId: ViewId) {
         y += BRANCH_OFFSET_Y;
       }
 
+      const nodeType = step.shape && step.shape !== 'process' ? 'shapedNode' : 'processNode';
+      const dims = step.shape && step.shape !== 'process' ? shapeDimensions[step.shape] : { width: NODE_WIDTH, height: NODE_HEIGHT };
+
       return {
         id: step.id,
-        type: 'processNode',
+        type: nodeType,
         position: {
           x: flowStartX + step.column * COLUMN_GAP,
           y,
         },
         data: { ...step } satisfies ProcessNodeData,
-        style: { width: NODE_WIDTH, height: NODE_HEIGHT },
+        style: { width: dims.width, height: dims.height },
       };
     });
 

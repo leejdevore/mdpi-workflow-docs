@@ -1,6 +1,6 @@
 'use client';
 
-import { Pencil, Eye, Undo2, Redo2 } from 'lucide-react';
+import { Pencil, Check, Undo2, Redo2 } from 'lucide-react';
 import { useEditMode } from '@/contexts/EditModeContext';
 
 interface EditModeToggleProps {
@@ -45,17 +45,17 @@ export function EditModeToggle({ canUndo, canRedo, onUndo, onRedo }: EditModeTog
             ? 'bg-amber-100 text-amber-800 border border-amber-300'
             : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
         }`}
-        title={isEditMode ? 'Switch to view mode' : 'Switch to edit mode'}
+        title={isEditMode ? 'Finish editing' : 'Switch to edit mode'}
       >
         {isEditMode ? (
           <>
-            <Pencil className="w-3.5 h-3.5" />
-            Editing
+            <Check className="w-3.5 h-3.5" />
+            Done
           </>
         ) : (
           <>
-            <Eye className="w-3.5 h-3.5" />
-            View
+            <Pencil className="w-3.5 h-3.5" />
+            Edit
           </>
         )}
       </button>

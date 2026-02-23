@@ -45,6 +45,26 @@ export function getActorY(actorId: ActorId): number {
   return pos.y + LANE_PADDING;
 }
 
+/** Given a Y coordinate, return the ActorId for the lane at that position */
+export function getActorForY(y: number): ActorId | null {
+  const positions = getLanePositions();
+  for (const pos of positions) {
+    if (y >= pos.y && y < pos.y + pos.height) {
+      const lane = lanes.find((l) => l.id === pos.laneId);
+      return lane ? (lane.actors[0] as ActorId) : null;
+    }
+  }
+  // Clamp: above all lanes → first lane, below all lanes → last lane
+  if (positions.length === 0) return null;
+  if (y < 0) {
+    const firstLane = lanes.find((l) => l.id === positions[0].laneId);
+    return firstLane ? (firstLane.actors[0] as ActorId) : null;
+  }
+  const lastPos = positions[positions.length - 1];
+  const lastLane = lanes.find((l) => l.id === lastPos.laneId);
+  return lastLane ? (lastLane.actors[0] as ActorId) : null;
+}
+
 /** Total height of all lanes */
 export function getTotalLanesHeight(): number {
   return lanes.length * LANE_HEIGHT;
