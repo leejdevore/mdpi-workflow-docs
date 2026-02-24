@@ -141,3 +141,30 @@ CREATE TRIGGER scenarios_updated_at
 CREATE TRIGGER meta_workflows_updated_at
   BEFORE UPDATE ON meta_workflows
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ============================================================
+-- Row Level Security (open access — no auth)
+-- ============================================================
+ALTER TABLE workflows ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all access" ON workflows FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE scenarios ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all access" ON scenarios FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE scenario_versions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all access" ON scenario_versions FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE workflow_steps ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all access" ON workflow_steps FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE workflow_edges ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all access" ON workflow_edges FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE meta_workflows ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all access" ON meta_workflows FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE meta_workflow_nodes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all access" ON meta_workflow_nodes FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE meta_workflow_edges ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all access" ON meta_workflow_edges FOR ALL USING (true) WITH CHECK (true);
