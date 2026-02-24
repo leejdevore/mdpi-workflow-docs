@@ -1,3 +1,8 @@
+/**
+ * @deprecated Use `@/types/workflow` for all new code.
+ * This file is retained only for the seed data.
+ */
+
 /** The three workflow views */
 export type ViewId = 'current' | 'digitized' | 'transformed';
 

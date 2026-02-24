@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { useEditMode } from '@/contexts/EditModeContext';
-import type { NodeShape } from '@/data/types';
+import type { NodeShape } from '@/types/workflow';
 import { basicShapes, specializedShapes, type ShapeDefinition } from './ShapeDefinitions';
 
 interface ShapeToolbarProps {

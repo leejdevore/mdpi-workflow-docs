@@ -3,7 +3,8 @@
 import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { FileText } from 'lucide-react';
-import type { WorkflowStep, NodeShape } from '@/data/types';
+import type { NodeShape } from '@/types/workflow';
+import type { ProcessNodeData } from '@/hooks/useWorkflowData';
 import { useEditMode } from '@/contexts/EditModeContext';
 import { stepTypeColors, getImpactColor, getTotalImpactColor } from '@/styles/flow-theme';
 
@@ -15,7 +16,7 @@ import { TrapezoidShape } from './shapes/TrapezoidShape';
 import { SubprocessShape } from './shapes/SubprocessShape';
 import { ValidationShape } from './shapes/ValidationShape';
 
-function NodeContent({ data }: { data: WorkflowStep }) {
+function NodeContent({ data }: { data: ProcessNodeData }) {
   const colors = stepTypeColors[data.stepType];
   const impact = data.impact;
   const totalImpact = impact ? impact.consistency + impact.cost + impact.control : null;
@@ -87,7 +88,7 @@ function ImpactDot({ label, value }: { label: string; value: number }) {
 }
 
 function ShapedNodeComponent({ data }: NodeProps) {
-  const nodeData = data as unknown as WorkflowStep;
+  const nodeData = data as unknown as ProcessNodeData;
   const { isEditMode } = useEditMode();
   const shape: NodeShape = nodeData.shape ?? 'process';
   const colors = stepTypeColors[nodeData.stepType];

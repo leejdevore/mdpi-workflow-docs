@@ -2,14 +2,15 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useReactFlow } from '@xyflow/react';
-import type { NodeShape, WorkflowStep, ActorId } from '@/data/types';
+import type { NodeShape, WorkflowStep } from '@/types/workflow';
 import { useEditMode } from '@/contexts/EditModeContext';
 import { shapeDefinitions } from './ShapeDefinitions';
 
 interface CanvasClickHandlerProps {
   armedShape: NodeShape | null;
   onDisarm: () => void;
-  onAddStep: (step: WorkflowStep, position: { x: number; y: number }) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onAddStep: (step: WorkflowStep | Record<string, any>, position: { x: number; y: number }) => void;
 }
 
 export function CanvasClickHandler({ armedShape, onDisarm, onAddStep }: CanvasClickHandlerProps) {
@@ -70,15 +71,16 @@ export function CanvasClickHandler({ armedShape, onDisarm, onAddStep }: CanvasCl
       const snappedX = Math.round(flowPosition.x / 70) * 70;
       const snappedY = Math.round(flowPosition.y / 25) * 25;
 
-      const newStep: WorkflowStep = {
+      const newStep: Partial<WorkflowStep> & Record<string, unknown> = {
         id: `step-${Date.now()}`,
         title: `New ${shapeDef.label}`,
         description: '',
-        actor: 'madigan-pm' as ActorId,
-        phase: 'pre-draw',
+        actorId: 'madigan-pm',
+        phaseId: 'pre-draw',
         stepType: shapeDef.defaultStepType,
         column: 0,
         shape: armedShape,
+        versionId: '',
       };
 
       onAddStep(newStep, { x: snappedX, y: snappedY });

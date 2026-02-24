@@ -1,11 +1,11 @@
 'use client';
 
 import { X, FileText, AlertTriangle, Lightbulb, Wrench, BarChart3 } from 'lucide-react';
-import type { WorkflowStep } from '@/data/types';
+import type { ProcessNodeData } from '@/hooks/useWorkflowData';
 import { stepTypeColors, getImpactColor, getImpactBgColor, getTotalImpactColor } from '@/styles/flow-theme';
 
 interface NodeDetailPanelProps {
-  step: WorkflowStep | null;
+  step: ProcessNodeData | null;
   onClose: () => void;
 }
 
@@ -214,8 +214,8 @@ export function NodeDetailPanel({ step, onClose }: NodeDetailPanelProps) {
 
         {/* Metadata */}
         <div className="border-t pt-3 text-xs text-slate-400 space-y-1">
-          <p>Phase: {step.phase}</p>
-          <p>Actor: {step.actor}</p>
+          <p>Phase: {step.phaseId}</p>
+          <p>Actor: {step.actorId}</p>
           {step.branch && <p>Payment Path: {step.branch.toUpperCase()}</p>}
         </div>
       </div>

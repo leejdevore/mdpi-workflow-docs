@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { WorkflowStep } from '@/data/types';
+import type { WorkflowStep } from '@/types/workflow';
 
 export interface ValidationErrors {
   title?: string;

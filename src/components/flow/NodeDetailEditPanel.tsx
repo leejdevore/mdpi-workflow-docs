@@ -2,14 +2,15 @@
 
 import { useState, useCallback } from 'react';
 import { X, Trash2, Plus, Minus, Save, BarChart3 } from 'lucide-react';
-import type { WorkflowStep, StepType, ActorId, ProcessPhase, ImpactScore } from '@/data/types';
+import type { StepType, ImpactScore } from '@/types/workflow';
+import type { ProcessNodeData } from '@/hooks/useWorkflowData';
 import { stepTypeColors, getImpactColor, getImpactBgColor, getTotalImpactColor } from '@/styles/flow-theme';
 import { useWorkflowContext } from '@/contexts/WorkflowContext';
 import { ActorCombobox } from '@/components/ui/ActorCombobox';
 
 interface NodeDetailEditPanelProps {
-  step: WorkflowStep;
-  onSave: (updates: Partial<WorkflowStep>) => void;
+  step: ProcessNodeData;
+  onSave: (updates: Partial<ProcessNodeData>) => void;
   onDelete: () => void;
   onClose: () => void;
 }
@@ -76,8 +77,8 @@ export function NodeDetailEditPanel({ step, onSave, onDelete, onClose }: NodeDet
   const [title, setTitle] = useState(step.title);
   const [description, setDescription] = useState(step.description);
   const [stepType, setStepType] = useState<StepType>(step.stepType);
-  const [actor, setActor] = useState<string>(step.actor);
-  const [phase, setPhase] = useState<string>(step.phase);
+  const [actor, setActor] = useState<string>(step.actorId);
+  const [phase, setPhase] = useState<string>(step.phaseId);
   const [stepNumber, setStepNumber] = useState(step.stepNumber ?? 0);
   const [documents, setDocuments] = useState<string[]>(step.documents ?? []);
   const [painPoints, setPainPoints] = useState<string[]>(step.painPoints ?? []);
@@ -98,8 +99,8 @@ export function NodeDetailEditPanel({ step, onSave, onDelete, onClose }: NodeDet
       title: title.trim(),
       description: description.trim(),
       stepType,
-      actor: actor as ActorId,
-      phase: phase as ProcessPhase,
+      actorId: actor,
+      phaseId: phase,
       stepNumber: stepNumber || undefined,
       documents: documents.filter(Boolean),
       painPoints: painPoints.filter(Boolean),

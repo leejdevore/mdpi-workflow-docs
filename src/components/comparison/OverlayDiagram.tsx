@@ -11,8 +11,8 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import type { WorkflowStep as OldWorkflowStep } from '@/data/types';
 import type { Scenario, ActorDefinition, PhaseDefinition } from '@/types/workflow';
+import type { ProcessNodeData } from '@/hooks/useWorkflowData';
 import type { OverlayConfig } from '@/types/comparison';
 import { useOverlayData } from '@/hooks/useOverlayData';
 import { ProcessNode } from '@/components/flow/ProcessNode';
@@ -41,11 +41,11 @@ interface OverlayDiagramProps {
 
 function OverlayDiagramInner({ config, scenarios, actors, phases }: OverlayDiagramProps) {
   const { nodes, edges, lanePositions, phasePositions, loading } = useOverlayData(config, scenarios, actors, phases);
-  const [selectedStep, setSelectedStep] = useState<OldWorkflowStep | null>(null);
+  const [selectedStep, setSelectedStep] = useState<ProcessNodeData | null>(null);
 
   const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     if (node.type === 'processNode') {
-      setSelectedStep(node.data as unknown as OldWorkflowStep);
+      setSelectedStep(node.data as unknown as ProcessNodeData);
     }
   }, []);
 

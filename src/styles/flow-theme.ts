@@ -1,4 +1,4 @@
-import type { StepType, NodeShape } from '@/data/types';
+import type { StepType, NodeShape } from '@/types/workflow';
 
 /** Node dimensions */
 export const NODE_WIDTH = 220;

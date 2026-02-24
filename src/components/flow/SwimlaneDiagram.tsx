@@ -12,8 +12,8 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import type { WorkflowStep as OldWorkflowStep, NodeShape } from '@/data/types';
-import type { WorkflowStep, WorkflowEdge, ActorDefinition, PhaseDefinition } from '@/types/workflow';
+import type { WorkflowStep, WorkflowEdge, ActorDefinition, PhaseDefinition, NodeShape } from '@/types/workflow';
+import type { ProcessNodeData } from '@/hooks/useWorkflowData';
 import { useEditableWorkflow } from '@/hooks/useEditableWorkflow';
 import { useEditMode } from '@/contexts/EditModeContext';
 import { ProcessNode } from './ProcessNode';
@@ -91,7 +91,7 @@ export function SwimlaneDiagram({ steps, edges: edgeData, actors, phases, classN
   } = useEditableWorkflow({ steps, edges: edgeData, actors, phases });
 
   const { isEditMode } = useEditMode();
-  const [selectedStep, setSelectedStep] = useState<OldWorkflowStep | null>(null);
+  const [selectedStep, setSelectedStep] = useState<ProcessNodeData | null>(null);
   const [armedShape, setArmedShape] = useState<NodeShape | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [editingEdge, setEditingEdge] = useState<EditingEdge | null>(null);
@@ -108,7 +108,7 @@ export function SwimlaneDiagram({ steps, edges: edgeData, actors, phases, classN
 
   const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     if (node.type === 'processNode') {
-      setSelectedStep(node.data as unknown as OldWorkflowStep);
+      setSelectedStep(node.data as unknown as ProcessNodeData);
       setSelectedNodeId(node.id);
     }
   }, []);
@@ -117,7 +117,7 @@ export function SwimlaneDiagram({ steps, edges: edgeData, actors, phases, classN
     (_event: React.MouseEvent, node: Node) => {
       if (!isEditMode) return;
       if (node.type === 'processNode') {
-        setSelectedStep(node.data as unknown as OldWorkflowStep);
+        setSelectedStep(node.data as unknown as ProcessNodeData);
         setSelectedNodeId(node.id);
       }
     },
@@ -140,7 +140,7 @@ export function SwimlaneDiagram({ steps, edges: edgeData, actors, phases, classN
   }, []);
 
   const handleEditSave = useCallback(
-    (updates: Partial<OldWorkflowStep>) => {
+    (updates: Partial<ProcessNodeData>) => {
       if (selectedNodeId) {
         updateStep(selectedNodeId, updates);
       }

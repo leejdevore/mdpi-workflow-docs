@@ -11,8 +11,8 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import type { WorkflowStep as OldWorkflowStep } from '@/data/types';
 import type { Scenario, ActorDefinition, PhaseDefinition, UUID } from '@/types/workflow';
+import type { ProcessNodeData } from '@/hooks/useWorkflowData';
 import type { SliderConfig } from '@/types/comparison';
 import { useScenarioData } from '@/hooks/useScenarioData';
 import { useWorkflowData } from '@/hooks/useWorkflowData';
@@ -189,12 +189,12 @@ function ViewLabel({ side, label, color }: { side: 'left' | 'right'; label: stri
 export function SliderDiagram({ config, scenarios, actors, phases, onDividerChange }: SliderDiagramProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { viewport, handleLeftChange, handleRightChange } = useViewportSync();
-  const [selectedStep, setSelectedStep] = useState<OldWorkflowStep | null>(null);
+  const [selectedStep, setSelectedStep] = useState<ProcessNodeData | null>(null);
   const [needsFitView, setNeedsFitView] = useState(true);
 
   const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     if (node.type === 'processNode') {
-      setSelectedStep(node.data as unknown as OldWorkflowStep);
+      setSelectedStep(node.data as unknown as ProcessNodeData);
     }
   }, []);
 

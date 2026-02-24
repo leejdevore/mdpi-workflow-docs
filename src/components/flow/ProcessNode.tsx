@@ -4,7 +4,7 @@ import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { FileText } from 'lucide-react';
 import type { ProcessNodeData } from '@/hooks/useWorkflowData';
-import type { NodeShape } from '@/data/types';
+import type { NodeShape } from '@/types/workflow';
 import { useEditMode } from '@/contexts/EditModeContext';
 import { stepTypeColors, getImpactColor, getTotalImpactColor } from '@/styles/flow-theme';
 

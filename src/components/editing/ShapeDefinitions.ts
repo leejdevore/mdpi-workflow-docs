@@ -1,4 +1,4 @@
-import type { NodeShape, StepType } from '@/data/types';
+import type { NodeShape, StepType } from '@/types/workflow';
 
 export interface ShapeDefinition {
   id: NodeShape;
