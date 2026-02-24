@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { X, Plus, Trash2, ChevronUp, ChevronDown, Save, Columns3 } from 'lucide-react';
 import { useWorkflowContext } from '@/contexts/WorkflowContext';
 import type { PhaseDefinition } from '@/types/workflow';
+import { slugify } from '@/lib/utils';
 
 interface PhaseManagementPanelProps {
   onClose: () => void;
@@ -21,13 +22,6 @@ const PRESET_COLORS = [
   '#FEF9C3', // yellow-100
   '#F1F5F9', // slate-100
 ];
-
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-}
 
 export function PhaseManagementPanel({ onClose }: PhaseManagementPanelProps) {
   const { phases, steps, updatePhases, activeWorkflow } = useWorkflowContext();
