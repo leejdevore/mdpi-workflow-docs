@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { X } from 'lucide-react';
 import { useWorkflowContext } from '@/contexts/WorkflowContext';
 import { lanes } from '@/data/lanes';
@@ -68,6 +69,7 @@ export function NavNewWorkflowDialog({ onClose }: NavNewWorkflowDialogProps) {
       }, 100);
     } catch (err) {
       console.error('Failed to create workflow:', err);
+      toast.error('Failed to create workflow');
       setLoading(false);
     }
   };

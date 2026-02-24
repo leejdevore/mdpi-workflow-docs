@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { toast } from 'sonner';
 import { X, Plus, Trash2, ChevronUp, ChevronDown, Save, Users } from 'lucide-react';
 import { useWorkflowContext } from '@/contexts/WorkflowContext';
 import type { ActorDefinition } from '@/types/workflow';
@@ -105,6 +106,7 @@ export function ActorManagementPanel({ onClose }: ActorManagementPanelProps) {
       onClose();
     } catch (err) {
       console.error('Failed to save actors:', err);
+      toast.error('Failed to save actors');
     } finally {
       setSaving(false);
     }

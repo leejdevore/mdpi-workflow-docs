@@ -1,4 +1,5 @@
 import { WorkflowProvider } from '@/contexts/WorkflowContext';
+import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
 
 export default function DiagramLayout({
   children,
@@ -7,9 +8,11 @@ export default function DiagramLayout({
 }) {
   return (
     <WorkflowProvider>
-      <div className="flex h-screen">
-        {children}
-      </div>
+      <ErrorBoundary>
+        <div className="flex h-screen">
+          {children}
+        </div>
+      </ErrorBoundary>
     </WorkflowProvider>
   );
 }

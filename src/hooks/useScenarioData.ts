@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import type { WorkflowStep, WorkflowEdge, UUID } from '@/types/workflow';
 import { fetchLatestVersion, fetchVersionData } from '@/lib/supabase/queries';
 
@@ -36,7 +37,10 @@ export function useScenarioData(scenarioId: UUID | null) {
         setEdges(data.edges);
       })
       .catch((err) => {
-        if (!cancelled) console.error('Failed to load scenario data:', err);
+        if (!cancelled) {
+          console.error('Failed to load scenario data:', err);
+          toast.error('Failed to load scenario data');
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

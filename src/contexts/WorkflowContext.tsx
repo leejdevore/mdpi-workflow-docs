@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { toast } from 'sonner';
 import type {
   Workflow,
   Scenario,
@@ -114,6 +115,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
       setTree(data);
     } catch (err) {
       console.error('Failed to load workflow tree:', err);
+      toast.error('Failed to load workflows');
     } finally {
       setTreeLoading(false);
     }
@@ -165,6 +167,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
         }
       } catch (err) {
         console.error('Failed to load scenario:', err);
+        toast.error('Failed to load scenario');
       } finally {
         setDataLoading(false);
       }
@@ -192,6 +195,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
         }
       } catch (err) {
         console.error('Failed to load version:', err);
+        toast.error('Failed to load version');
       } finally {
         setDataLoading(false);
       }
@@ -218,6 +222,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
       }
 
       await refreshTree();
+      toast.success('Workflow created');
       return wf.id;
     },
     [refreshTree]
@@ -278,6 +283,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
       if (!selection?.workflowId) return;
       const updated = await apiUpdateWorkflow(selection.workflowId, { actors: newActors });
       setActiveWorkflow(updated);
+      toast.success('Actors updated');
     },
     [selection]
   );
@@ -287,6 +293,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
       if (!selection?.workflowId) return;
       const updated = await apiUpdateWorkflow(selection.workflowId, { phases: newPhases });
       setActiveWorkflow(updated);
+      toast.success('Phases updated');
     },
     [selection]
   );
@@ -298,6 +305,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
       await saveVersionData(selection.versionId, newSteps, newEdges);
       setSteps(newSteps);
       setEdges(newEdges);
+      toast.success('Data saved');
     },
     [selection]
   );

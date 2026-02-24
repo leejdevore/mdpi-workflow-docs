@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { toast } from 'sonner';
 import { X, Plus, Trash2, ChevronUp, ChevronDown, Save, Columns3 } from 'lucide-react';
 import { useWorkflowContext } from '@/contexts/WorkflowContext';
 import type { PhaseDefinition } from '@/types/workflow';
@@ -104,6 +105,7 @@ export function PhaseManagementPanel({ onClose }: PhaseManagementPanelProps) {
       onClose();
     } catch (err) {
       console.error('Failed to save phases:', err);
+      toast.error('Failed to save phases');
     } finally {
       setSaving(false);
     }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, useEffect, useRef } from 'react';
+import { toast } from 'sonner';
 import { Node, Edge } from '@xyflow/react';
 import type { WorkflowStep, WorkflowEdge, Scenario, ActorDefinition, PhaseDefinition } from '@/types/workflow';
 import type { OverlayConfig } from '@/types/comparison';
@@ -97,6 +98,7 @@ export function useOverlayData(
       })
       .catch((err) => {
         console.error('Failed to load overlay data:', err);
+        toast.error('Failed to load comparison data');
         for (const id of missingIds) {
           fetchingRef.current.delete(id);
         }
