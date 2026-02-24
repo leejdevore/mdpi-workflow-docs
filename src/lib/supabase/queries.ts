@@ -7,6 +7,7 @@ import {
   toEdge,
   fromStep,
   fromEdge,
+  type DbScenarioVersion,
 } from './transforms';
 import type {
   Workflow,
@@ -152,6 +153,8 @@ export async function createWorkflow(
   actors: ActorDefinition[],
   phases: PhaseDefinition[]
 ): Promise<Workflow> {
+  if (!name.trim()) throw new Error('Workflow name is required');
+
   const supabase = createClient();
   const { data, error } = await supabase
     .from('workflows')
@@ -170,6 +173,9 @@ export async function createScenario(
   order: number,
   description = ''
 ): Promise<Scenario> {
+  if (!workflowId) throw new Error('workflowId is required');
+  if (!name.trim()) throw new Error('Scenario name is required');
+
   const supabase = createClient();
   const { data, error } = await supabase
     .from('scenarios')
@@ -193,9 +199,26 @@ export async function createVersion(
   source: ScenarioVersion['source'],
   label?: string
 ): Promise<ScenarioVersion> {
+  if (!scenarioId) throw new Error('scenarioId is required');
+
   const supabase = createClient();
 
-  // Mark previous versions as not latest
+  // Try atomic RPC first (single transaction), fall back to two-step approach
+  const { data: rpcData, error: rpcError } = await supabase.rpc(
+    'create_version_atomic',
+    {
+      p_scenario_id: scenarioId,
+      p_version_number: versionNumber,
+      p_source: source,
+      p_label: label ?? null,
+    }
+  );
+
+  if (!rpcError && rpcData) {
+    return toVersion(rpcData as unknown as DbScenarioVersion);
+  }
+
+  // Fallback: non-atomic two-step (for environments without the RPC function)
   await supabase
     .from('scenario_versions')
     .update({ is_latest: false })
@@ -270,28 +293,69 @@ export async function updateWorkflow(
 // Update version data
 // =========================================================
 
-/** Save all steps for a version (delete existing + reinsert) */
+/** Save steps and edges for a version using diff-based upsert */
 export async function saveVersionData(
   versionId: UUID,
   steps: WorkflowStep[],
   edges: WorkflowEdge[]
 ): Promise<void> {
+  if (!versionId) throw new Error('versionId is required');
+
   const supabase = createClient();
 
-  // Delete existing edges first (FK constraint), then steps
-  await supabase.from('workflow_edges').delete().eq('version_id', versionId);
-  await supabase.from('workflow_steps').delete().eq('version_id', versionId);
+  // 1. Fetch existing IDs in parallel
+  const [existingSteps, existingEdges] = await Promise.all([
+    supabase
+      .from('workflow_steps')
+      .select('id')
+      .eq('version_id', versionId),
+    supabase
+      .from('workflow_edges')
+      .select('id')
+      .eq('version_id', versionId),
+  ]);
 
-  // Insert new data
+  const existingStepIds = new Set((existingSteps.data ?? []).map((r) => r.id));
+  const existingEdgeIds = new Set((existingEdges.data ?? []).map((r) => r.id));
+
+  // 2. Compute what was removed
+  const newStepIds = new Set(steps.map((s) => s.id));
+  const newEdgeIds = new Set(edges.map((e) => e.id));
+
+  const removedEdgeIds = [...existingEdgeIds].filter((id) => !newEdgeIds.has(id));
+  const removedStepIds = [...existingStepIds].filter((id) => !newStepIds.has(id));
+
+  // 3. Delete removed edges first (FK constraint), then removed steps
+  if (removedEdgeIds.length > 0) {
+    const { error } = await supabase
+      .from('workflow_edges')
+      .delete()
+      .in('id', removedEdgeIds);
+    if (error) throw error;
+  }
+
+  if (removedStepIds.length > 0) {
+    const { error } = await supabase
+      .from('workflow_steps')
+      .delete()
+      .in('id', removedStepIds);
+    if (error) throw error;
+  }
+
+  // 4. Upsert remaining steps, then edges
   if (steps.length > 0) {
     const stepRows = steps.map(fromStep);
-    const { error: sErr } = await supabase.from('workflow_steps').insert(stepRows);
+    const { error: sErr } = await supabase
+      .from('workflow_steps')
+      .upsert(stepRows, { onConflict: 'id' });
     if (sErr) throw sErr;
   }
 
   if (edges.length > 0) {
     const edgeRows = edges.map(fromEdge);
-    const { error: eErr } = await supabase.from('workflow_edges').insert(edgeRows);
+    const { error: eErr } = await supabase
+      .from('workflow_edges')
+      .upsert(edgeRows, { onConflict: 'id' });
     if (eErr) throw eErr;
   }
 }
