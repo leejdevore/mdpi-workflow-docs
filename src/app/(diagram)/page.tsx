@@ -1,18 +1,34 @@
 'use client';
 
 import { useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { ReactFlowProvider } from '@xyflow/react';
 import { SwimlaneDiagram } from '@/components/flow/SwimlaneDiagram';
 import { ViewModeSelector } from '@/components/comparison/ViewModeSelector';
-import { OverlayControls } from '@/components/comparison/OverlayControls';
-import { OverlayDiagram } from '@/components/comparison/OverlayDiagram';
-import { SliderControls } from '@/components/comparison/SliderControls';
-import { SliderDiagram } from '@/components/comparison/SliderDiagram';
 import { useComparisonState } from '@/hooks/useComparisonState';
 import { EditModeProvider } from '@/contexts/EditModeContext';
 import { useWorkflowContext } from '@/contexts/WorkflowContext';
 import { Header } from '@/components/layout/Header';
 import { LeftNav } from '@/components/nav/LeftNav';
+
+/* Lazy-load comparison views — they pull in heavy React Flow instances
+   and are only rendered when the user switches away from the default tabs view. */
+const OverlayControls = dynamic(
+  () => import('@/components/comparison/OverlayControls').then((m) => ({ default: m.OverlayControls })),
+  { ssr: false },
+);
+const OverlayDiagram = dynamic(
+  () => import('@/components/comparison/OverlayDiagram').then((m) => ({ default: m.OverlayDiagram })),
+  { ssr: false },
+);
+const SliderControls = dynamic(
+  () => import('@/components/comparison/SliderControls').then((m) => ({ default: m.SliderControls })),
+  { ssr: false },
+);
+const SliderDiagram = dynamic(
+  () => import('@/components/comparison/SliderDiagram').then((m) => ({ default: m.SliderDiagram })),
+  { ssr: false },
+);
 
 export default function DiagramPage() {
   const {
