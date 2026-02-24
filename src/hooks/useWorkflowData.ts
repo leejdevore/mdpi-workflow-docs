@@ -2,14 +2,35 @@
 
 import { useMemo } from 'react';
 import { Node, Edge } from '@xyflow/react';
-import { ViewId, WorkflowStep } from '@/data/types';
-import { getWorkflowView } from '@/data';
-import { getActorY, getFlowStartX, getLanePositions } from '@/lib/swimlane-positions';
-import { getPhasePositions, type PhasePosition } from '@/lib/phase-positions';
+import type { WorkflowStep, WorkflowEdge, ActorDefinition, PhaseDefinition, StepType, NodeShape } from '@/types/workflow';
+import { getLanePositionsForActors, getActorYForActors, getFlowStartX } from '@/lib/swimlane-positions';
+import { getPhasePositionsFromData } from '@/lib/phase-positions';
 import { COLUMN_GAP, NODE_WIDTH, NODE_HEIGHT, BRANCH_OFFSET_Y, LANE_HEIGHT, PHASE_HEADER_HEIGHT, shapeDimensions } from '@/styles/flow-theme';
 import type { PhaseHeaderData } from '@/components/flow/PhaseHeaderNode';
 
-export interface ProcessNodeData extends WorkflowStep {
+export interface ProcessNodeData {
+  id: string;
+  versionId: string;
+  stepNumber?: number;
+  title: string;
+  description: string;
+  actorId: string;
+  phaseId: string;
+  stepType: StepType;
+  documents?: string[];
+  painPoints?: string[];
+  improvements?: string[];
+  toolsUsed?: string[];
+  column: number;
+  branch?: string;
+  subItems?: string[];
+  shape?: NodeShape;
+  impact?: { consistency: number; cost: number; control: number };
+  positionX?: number;
+  positionY?: number;
+  // Old field names for backward compat with ProcessNode rendering
+  actor: string;
+  phase: string;
   [key: string]: unknown;
 }
 
@@ -20,12 +41,20 @@ export interface LaneHeaderData {
   [key: string]: unknown;
 }
 
-export function useWorkflowData(viewId: ViewId) {
+interface UseWorkflowLayoutParams {
+  steps: WorkflowStep[];
+  edges: WorkflowEdge[];
+  actors: ActorDefinition[];
+  phases: PhaseDefinition[];
+}
+
+export function useWorkflowData(params: UseWorkflowLayoutParams) {
+  const { steps, edges, actors, phases } = params;
+
   return useMemo(() => {
-    const view = getWorkflowView(viewId);
     const flowStartX = getFlowStartX();
-    const lanePositions = getLanePositions();
-    const phasePositions = getPhasePositions(view.steps);
+    const lanePositions = getLanePositionsForActors(actors);
+    const phasePositions = getPhasePositionsFromData(steps, phases);
 
     // Vertical offset: everything shifts down to make room for phase headers
     const yOffset = PHASE_HEADER_HEIGHT;
@@ -63,8 +92,8 @@ export function useWorkflowData(viewId: ViewId) {
     }));
 
     // Create process nodes from workflow steps (shifted down by yOffset)
-    const processNodes: Node[] = view.steps.map((step) => {
-      const baseY = getActorY(step.actor);
+    const processNodes: Node[] = steps.map((step) => {
+      const baseY = getActorYForActors(step.actorId, actors);
       let y = baseY + yOffset;
 
       // Offset branches within their lane
@@ -72,7 +101,15 @@ export function useWorkflowData(viewId: ViewId) {
         y += BRANCH_OFFSET_Y;
       }
 
-      const dims = step.shape && step.shape !== 'process' ? shapeDimensions[step.shape] : { width: NODE_WIDTH, height: NODE_HEIGHT };
+      const shapeKey = step.shape && step.shape !== 'process' ? step.shape : 'process';
+      const dims = shapeDimensions[shapeKey] ?? { width: NODE_WIDTH, height: NODE_HEIGHT };
+
+      // Build data with both new and old field names for ProcessNode compatibility
+      const data: ProcessNodeData = {
+        ...step,
+        actor: step.actorId,
+        phase: step.phaseId,
+      };
 
       return {
         id: step.id,
@@ -81,13 +118,13 @@ export function useWorkflowData(viewId: ViewId) {
           x: flowStartX + step.column * COLUMN_GAP,
           y,
         },
-        data: { ...step } satisfies ProcessNodeData,
+        data,
         style: { width: dims.width, height: dims.height },
       };
     });
 
     // Create edges
-    const flowEdges: Edge[] = view.edges.map((edge) => ({
+    const flowEdges: Edge[] = edges.map((edge) => ({
       id: edge.id,
       source: edge.sourceStepId,
       target: edge.targetStepId,
@@ -115,5 +152,5 @@ export function useWorkflowData(viewId: ViewId) {
       lanePositions,
       phasePositions,
     };
-  }, [viewId]);
+  }, [steps, edges, actors, phases]);
 }

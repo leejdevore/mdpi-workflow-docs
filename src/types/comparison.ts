@@ -1,14 +1,14 @@
-import type { ViewId } from '@/data/types';
+import type { UUID } from '@/types/workflow';
 
 export type ViewMode = 'tabs' | 'overlay' | 'slider';
 
 export interface OverlayConfig {
-  primaryView: ViewId;
-  ghostViews: ViewId[];
+  primaryView: UUID; // scenario ID
+  ghostViews: UUID[]; // scenario IDs
 }
 
 export interface SliderConfig {
-  leftView: ViewId;
-  rightView: ViewId;
+  leftView: UUID; // scenario ID
+  rightView: UUID; // scenario ID
   dividerPosition: number; // 0-100 percentage from left
 }

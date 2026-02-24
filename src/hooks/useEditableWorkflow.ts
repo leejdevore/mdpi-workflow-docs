@@ -4,8 +4,6 @@ import { useCallback, useEffect, useRef } from 'react';
 import {
   useNodesState,
   useEdgesState,
-  applyNodeChanges,
-  applyEdgeChanges,
   type Node,
   type Edge,
   type NodeChange,
@@ -13,25 +11,31 @@ import {
   type Connection,
   addEdge as rfAddEdge,
 } from '@xyflow/react';
-import type { ViewId, WorkflowStep } from '@/data/types';
+import type { WorkflowStep, WorkflowEdge, ActorDefinition, PhaseDefinition } from '@/types/workflow';
 import { useWorkflowData } from './useWorkflowData';
 import { useUndoRedo } from './useUndoRedo';
 import { shapeDimensions } from '@/styles/flow-theme';
-import { getActorForY } from '@/lib/swimlane-positions';
+import { getActorForYFromActors } from '@/lib/swimlane-positions';
 
 interface WorkflowSnapshot {
   nodes: Node[];
   edges: Edge[];
 }
 
-export function useEditableWorkflow(viewId: ViewId) {
-  const { nodes: initialNodes, edges: initialEdges, lanePositions, phasePositions } = useWorkflowData(viewId);
+interface UseEditableWorkflowParams {
+  steps: WorkflowStep[];
+  edges: WorkflowEdge[];
+  actors: ActorDefinition[];
+  phases: PhaseDefinition[];
+}
+
+export function useEditableWorkflow(params: UseEditableWorkflowParams) {
+  const { nodes: initialNodes, edges: initialEdges, lanePositions, phasePositions } = useWorkflowData(params);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const initialized = useRef(false);
 
   const {
-    state: _snapshot,
     undo: undoSnapshot,
     redo: redoSnapshot,
     canUndo,
@@ -41,7 +45,7 @@ export function useEditableWorkflow(viewId: ViewId) {
     reset: resetSnapshot,
   } = useUndoRedo<WorkflowSnapshot>({ nodes: initialNodes, edges: initialEdges });
 
-  // Sync from static data on viewId change
+  // Sync from data on change
   useEffect(() => {
     if (!initialized.current) {
       initialized.current = true;
@@ -50,7 +54,7 @@ export function useEditableWorkflow(viewId: ViewId) {
     setNodes(initialNodes);
     setEdges(initialEdges);
     resetSnapshot({ nodes: initialNodes, edges: initialEdges });
-  }, [viewId, initialNodes, initialEdges, setNodes, setEdges, resetSnapshot]);
+  }, [initialNodes, initialEdges, setNodes, setEdges, resetSnapshot]);
 
   // Take snapshot before mutation
   const takeSnapshot = useCallback(() => {
@@ -58,14 +62,6 @@ export function useEditableWorkflow(viewId: ViewId) {
     setSnapshot({ nodes, edges });
   }, [snapshot, setSnapshot, nodes, edges]);
 
-  // Undo: restore previous snapshot
-  const undo = useCallback(() => {
-    // Save current to future
-    snapshot();
-    undoSnapshot();
-  }, [snapshot, undoSnapshot]);
-
-  // We need a custom undo/redo that restores nodes and edges
   const handleUndo = useCallback(() => {
     undoSnapshot();
   }, [undoSnapshot]);
@@ -74,24 +70,9 @@ export function useEditableWorkflow(viewId: ViewId) {
     redoSnapshot();
   }, [redoSnapshot]);
 
-  // When undo/redo fires, the snapshot state changes. We need to sync nodes/edges from it.
-  // Actually, let's simplify: use the undo/redo to store full snapshots and sync back.
-  // We'll restructure: undo/redo manages snapshots, and we sync nodes/edges from them.
-
-  // Simpler approach: wrap mutations with snapshot + direct state changes
-  const withSnapshot = useCallback(
-    (fn: () => void) => {
-      snapshot();
-      setSnapshot({ nodes, edges });
-      fn();
-    },
-    [snapshot, setSnapshot, nodes, edges]
-  );
-
   // Node changes (drag, select, remove via React Flow)
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      // Only snapshot for position changes (drag), not select/dimensions
       const hasMeaningfulChange = changes.some(
         (c) => c.type === 'position' && c.dragging === false
       );
@@ -106,14 +87,15 @@ export function useEditableWorkflow(viewId: ViewId) {
           const node = nodes.find((n) => n.id === c.id);
           if (!node || node.type === 'laneHeader') continue;
 
-          const currentActor = (node.data as unknown as WorkflowStep).actor;
-          const newActor = getActorForY(c.position.y);
+          const currentActor = (node.data as Record<string, unknown>).actorId as string
+            ?? (node.data as Record<string, unknown>).actor as string;
+          const newActor = getActorForYFromActors(c.position.y, params.actors);
 
           if (newActor && newActor !== currentActor) {
             setNodes((nds) =>
               nds.map((n) =>
                 n.id === c.id
-                  ? { ...n, data: { ...n.data, actor: newActor } }
+                  ? { ...n, data: { ...n.data, actorId: newActor, actor: newActor } }
                   : n
               )
             );
@@ -121,7 +103,7 @@ export function useEditableWorkflow(viewId: ViewId) {
         }
       }
     },
-    [onNodesChange, takeSnapshot, nodes, setNodes]
+    [onNodesChange, takeSnapshot, nodes, setNodes, params.actors]
   );
 
   // Edge changes from React Flow
@@ -157,15 +139,19 @@ export function useEditableWorkflow(viewId: ViewId) {
   // === Mutation helpers ===
 
   const addStep = useCallback(
-    (step: WorkflowStep, position: { x: number; y: number }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (step: WorkflowStep | Record<string, any>, position: { x: number; y: number }) => {
       takeSnapshot();
-      const nodeType = 'processNode';
-      const dims = step.shape ? shapeDimensions[step.shape] : shapeDimensions.process;
+      const shape = step.shape as string | undefined;
+      const dims = shape ? shapeDimensions[shape as keyof typeof shapeDimensions] ?? shapeDimensions.process : shapeDimensions.process;
+      // Normalize: support both old (actor/phase) and new (actorId/phaseId) field names
+      const actorValue = step.actorId ?? (step as Record<string, unknown>).actor ?? '';
+      const phaseValue = step.phaseId ?? (step as Record<string, unknown>).phase ?? '';
       const newNode: Node = {
         id: step.id,
-        type: nodeType,
+        type: 'processNode',
         position,
-        data: { ...step },
+        data: { ...step, actor: actorValue, actorId: actorValue, phase: phaseValue, phaseId: phaseValue },
         style: { width: dims.width, height: dims.height },
       };
       setNodes((nds) => [...nds, newNode]);
@@ -174,20 +160,31 @@ export function useEditableWorkflow(viewId: ViewId) {
   );
 
   const updateStep = useCallback(
-    (nodeId: string, updates: Partial<WorkflowStep>) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (nodeId: string, updates: Partial<WorkflowStep> | Record<string, any>) => {
       takeSnapshot();
       setNodes((nds) =>
         nds.map((node) => {
           if (node.id !== nodeId) return node;
-          const updatedData = { ...node.data, ...updates };
-          const shape = updates.shape ?? (node.data as unknown as WorkflowStep).shape;
-          const nodeType = 'processNode';
-          const dims = shape ? shapeDimensions[shape] : shapeDimensions.process;
+          const updatedData = { ...node.data, ...updates } as Record<string, unknown>;
+          // Keep both old (actor/phase) and new (actorId/phaseId) field names in sync
+          const newActor = updates.actorId ?? (updates as Record<string, unknown>).actor;
+          const newPhase = updates.phaseId ?? (updates as Record<string, unknown>).phase;
+          if (newActor) {
+            updatedData.actor = newActor;
+            updatedData.actorId = newActor;
+          }
+          if (newPhase) {
+            updatedData.phase = newPhase;
+            updatedData.phaseId = newPhase;
+          }
+          const shape = updates.shape ?? (node.data as Record<string, unknown>).shape as string;
+          const dims = shape ? shapeDimensions[shape as keyof typeof shapeDimensions] : shapeDimensions.process;
           return {
             ...node,
-            type: nodeType,
+            type: 'processNode',
             data: updatedData,
-            style: { width: dims.width, height: dims.height },
+            style: { width: dims?.width ?? 220, height: dims?.height ?? 100 },
           };
         })
       );
@@ -199,7 +196,6 @@ export function useEditableWorkflow(viewId: ViewId) {
     (nodeId: string) => {
       takeSnapshot();
       setNodes((nds) => nds.filter((n) => n.id !== nodeId));
-      // Remove connected edges
       setEdges((eds) =>
         eds.filter((e) => e.source !== nodeId && e.target !== nodeId)
       );
@@ -208,13 +204,13 @@ export function useEditableWorkflow(viewId: ViewId) {
   );
 
   const addNewEdge = useCallback(
-    (params: { source: string; target: string; label?: string }) => {
+    (edgeParams: { source: string; target: string; label?: string }) => {
       takeSnapshot();
       const newEdge: Edge = {
-        id: `edge-${params.source}-${params.target}-${Date.now()}`,
-        source: params.source,
-        target: params.target,
-        label: params.label,
+        id: `edge-${edgeParams.source}-${edgeParams.target}-${Date.now()}`,
+        source: edgeParams.source,
+        target: edgeParams.target,
+        label: edgeParams.label,
         type: 'customEdge',
         style: { stroke: '#64748B', strokeWidth: 2 },
       };
@@ -251,14 +247,12 @@ export function useEditableWorkflow(viewId: ViewId) {
     onConnect: handleConnect,
     setNodes,
     setEdges,
-    // Mutations
     addStep,
     updateStep,
     deleteStep,
     addEdge: addNewEdge,
     updateEdge,
     deleteEdge,
-    // Undo/redo
     undo: handleUndo,
     redo: handleRedo,
     canUndo,

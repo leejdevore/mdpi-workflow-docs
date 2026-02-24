@@ -1,51 +1,77 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import type { ViewId } from '@/data/types';
+import { useState, useCallback, useEffect } from 'react';
+import type { UUID, Scenario } from '@/types/workflow';
 import type { ViewMode, OverlayConfig, SliderConfig } from '@/types/comparison';
 
-export function useComparisonState() {
+export function useComparisonState(scenarios: Scenario[]) {
   const [viewMode, setViewMode] = useState<ViewMode>('tabs');
-  const [activeView, setActiveView] = useState<ViewId>('current');
 
   const [overlayConfig, setOverlayConfig] = useState<OverlayConfig>({
-    primaryView: 'current',
-    ghostViews: ['digitized'],
+    primaryView: '',
+    ghostViews: [],
   });
 
   const [sliderConfig, setSliderConfig] = useState<SliderConfig>({
-    leftView: 'current',
-    rightView: 'digitized',
+    leftView: '',
+    rightView: '',
     dividerPosition: 50,
   });
 
-  const setOverlayPrimary = useCallback((viewId: ViewId) => {
+  // Update configs when scenarios change (e.g., switching workflows)
+  useEffect(() => {
+    if (scenarios.length === 0) return;
+    const first = scenarios[0].id;
+    const second = scenarios[1]?.id ?? first;
+
+    setOverlayConfig((prev) => {
+      const primaryValid = scenarios.some((s) => s.id === prev.primaryView);
+      return {
+        primaryView: primaryValid ? prev.primaryView : first,
+        ghostViews: primaryValid
+          ? prev.ghostViews.filter((id) => scenarios.some((s) => s.id === id))
+          : second !== first ? [second] : [],
+      };
+    });
+
+    setSliderConfig((prev) => {
+      const leftValid = scenarios.some((s) => s.id === prev.leftView);
+      const rightValid = scenarios.some((s) => s.id === prev.rightView);
+      return {
+        leftView: leftValid ? prev.leftView : first,
+        rightView: rightValid ? prev.rightView : second,
+        dividerPosition: prev.dividerPosition,
+      };
+    });
+  }, [scenarios]);
+
+  const setOverlayPrimary = useCallback((scenarioId: UUID) => {
     setOverlayConfig((prev) => ({
       ...prev,
-      primaryView: viewId,
-      ghostViews: prev.ghostViews.filter((v) => v !== viewId),
+      primaryView: scenarioId,
+      ghostViews: prev.ghostViews.filter((v) => v !== scenarioId),
     }));
   }, []);
 
-  const toggleGhostView = useCallback((viewId: ViewId) => {
+  const toggleGhostView = useCallback((scenarioId: UUID) => {
     setOverlayConfig((prev) => {
-      if (viewId === prev.primaryView) return prev;
-      const has = prev.ghostViews.includes(viewId);
+      if (scenarioId === prev.primaryView) return prev;
+      const has = prev.ghostViews.includes(scenarioId);
       return {
         ...prev,
         ghostViews: has
-          ? prev.ghostViews.filter((v) => v !== viewId)
-          : [...prev.ghostViews, viewId],
+          ? prev.ghostViews.filter((v) => v !== scenarioId)
+          : [...prev.ghostViews, scenarioId],
       };
     });
   }, []);
 
-  const setSliderLeftView = useCallback((viewId: ViewId) => {
-    setSliderConfig((prev) => ({ ...prev, leftView: viewId }));
+  const setSliderLeftView = useCallback((scenarioId: UUID) => {
+    setSliderConfig((prev) => ({ ...prev, leftView: scenarioId }));
   }, []);
 
-  const setSliderRightView = useCallback((viewId: ViewId) => {
-    setSliderConfig((prev) => ({ ...prev, rightView: viewId }));
+  const setSliderRightView = useCallback((scenarioId: UUID) => {
+    setSliderConfig((prev) => ({ ...prev, rightView: scenarioId }));
   }, []);
 
   const setDividerPosition = useCallback((position: number) => {
@@ -55,8 +81,6 @@ export function useComparisonState() {
   return {
     viewMode,
     setViewMode,
-    activeView,
-    setActiveView,
     overlayConfig,
     setOverlayPrimary,
     toggleGhostView,

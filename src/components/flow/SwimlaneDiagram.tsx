@@ -12,7 +12,8 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import { ViewId, WorkflowStep, NodeShape } from '@/data/types';
+import type { WorkflowStep as OldWorkflowStep, NodeShape } from '@/data/types';
+import type { WorkflowStep, WorkflowEdge, ActorDefinition, PhaseDefinition } from '@/types/workflow';
 import { useEditableWorkflow } from '@/hooks/useEditableWorkflow';
 import { useEditMode } from '@/contexts/EditModeContext';
 import { ProcessNode } from './ProcessNode';
@@ -51,7 +52,10 @@ export const sharedFlowProps = {
 } as const;
 
 interface SwimlaneDiagramProps {
-  viewId: ViewId;
+  steps: WorkflowStep[];
+  edges: WorkflowEdge[];
+  actors: ActorDefinition[];
+  phases: PhaseDefinition[];
   className?: string;
 }
 
@@ -66,7 +70,7 @@ interface EditingEdge {
   position: { x: number; y: number };
 }
 
-export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
+export function SwimlaneDiagram({ steps, edges: edgeData, actors, phases, className }: SwimlaneDiagramProps) {
   const {
     nodes,
     edges,
@@ -84,10 +88,10 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
     deleteStep,
     updateEdge,
     deleteEdge,
-  } = useEditableWorkflow(viewId);
+  } = useEditableWorkflow({ steps, edges: edgeData, actors, phases });
 
   const { isEditMode } = useEditMode();
-  const [selectedStep, setSelectedStep] = useState<WorkflowStep | null>(null);
+  const [selectedStep, setSelectedStep] = useState<OldWorkflowStep | null>(null);
   const [armedShape, setArmedShape] = useState<NodeShape | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [editingEdge, setEditingEdge] = useState<EditingEdge | null>(null);
@@ -104,7 +108,7 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
 
   const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     if (node.type === 'processNode') {
-      setSelectedStep(node.data as unknown as WorkflowStep);
+      setSelectedStep(node.data as unknown as OldWorkflowStep);
       setSelectedNodeId(node.id);
     }
   }, []);
@@ -113,7 +117,7 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
     (_event: React.MouseEvent, node: Node) => {
       if (!isEditMode) return;
       if (node.type === 'processNode') {
-        setSelectedStep(node.data as unknown as WorkflowStep);
+        setSelectedStep(node.data as unknown as OldWorkflowStep);
         setSelectedNodeId(node.id);
       }
     },
@@ -132,13 +136,11 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
   );
 
   const handlePaneClick = useCallback(() => {
-    // Keep the panel open (sticky) — only close via panel's X button
     setEditingEdge(null);
   }, []);
 
-  // Handle save from edit panel
   const handleEditSave = useCallback(
-    (updates: Partial<WorkflowStep>) => {
+    (updates: Partial<OldWorkflowStep>) => {
       if (selectedNodeId) {
         updateStep(selectedNodeId, updates);
       }
@@ -146,7 +148,6 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
     [selectedNodeId, updateStep]
   );
 
-  // Handle delete from edit panel
   const handleEditDelete = useCallback(() => {
     if (!selectedNodeId || !selectedStep) return;
     const connectedEdgeCount = edges.filter(
@@ -159,7 +160,6 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
     });
   }, [selectedNodeId, selectedStep, edges]);
 
-  // Confirm deletion
   const handleConfirmDelete = useCallback(() => {
     if (deleteTarget) {
       deleteStep(deleteTarget.id);
@@ -190,14 +190,13 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
 
   // Estimate total width from the max column
   const maxColumn = Math.max(
-    ...nodes.filter((n) => n.type === 'processNode').map((n) => (n.data as unknown as WorkflowStep).column ?? 0),
+    ...nodes.filter((n) => n.type === 'processNode').map((n) => (n.data as Record<string, unknown>).column as number ?? 0),
     0
   );
   const totalWidth = (maxColumn + 2) * COLUMN_GAP;
 
   return (
     <div className={`relative w-full h-full ${className ?? ''}`}>
-      {/* Edit mode indicator ring */}
       {isEditMode && (
         <div className="absolute inset-0 border-2 border-amber-400 rounded-lg pointer-events-none z-10" />
       )}
@@ -237,10 +236,8 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
         />
       </ReactFlow>
 
-      {/* Shape toolbar */}
       <ShapeToolbar armedShape={armedShape} onArmShape={setArmedShape} />
 
-      {/* Canvas click handler for placing shapes */}
       {armedShape && (
         <CanvasClickHandler
           armedShape={armedShape}
@@ -249,7 +246,6 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
         />
       )}
 
-      {/* Edit mode toggle */}
       <div className="absolute top-3 right-3 z-20">
         <EditModeToggle
           canUndo={canUndo}
@@ -259,7 +255,6 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
         />
       </div>
 
-      {/* Edge edit popover */}
       {editingEdge && (
         <EdgeEditPopover
           edge={editingEdge.edge}
@@ -270,7 +265,6 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
         />
       )}
 
-      {/* Delete confirmation dialog */}
       {deleteTarget && (
         <DeleteConfirmDialog
           name={deleteTarget.name}
@@ -280,7 +274,6 @@ export function SwimlaneDiagram({ viewId, className }: SwimlaneDiagramProps) {
         />
       )}
 
-      {/* Detail panel — sticky, no backdrop, closes via X button only */}
       {selectedStep && (
         <div className="pointer-events-none fixed right-0 top-0 h-full z-50">
           <div className="pointer-events-auto h-full">

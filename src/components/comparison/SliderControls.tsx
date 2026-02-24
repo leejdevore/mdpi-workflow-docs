@@ -1,37 +1,29 @@
 'use client';
 
 import { ArrowLeftRight } from 'lucide-react';
-import type { ViewId } from '@/data/types';
+import type { Scenario, UUID } from '@/types/workflow';
 import type { SliderConfig } from '@/types/comparison';
-import { getAllViewIds } from '@/data';
-
-const viewLabels: Record<ViewId, string> = {
-  current: 'Current State',
-  digitized: 'Digitized',
-  transformed: 'Digitally Transformed',
-};
 
 interface SliderControlsProps {
   config: SliderConfig;
-  onSetLeft: (viewId: ViewId) => void;
-  onSetRight: (viewId: ViewId) => void;
+  scenarios: Scenario[];
+  onSetLeft: (scenarioId: UUID) => void;
+  onSetRight: (scenarioId: UUID) => void;
   onSwap: () => void;
 }
 
-export function SliderControls({ config, onSetLeft, onSetRight, onSwap }: SliderControlsProps) {
-  const allViews = getAllViewIds();
-
+export function SliderControls({ config, scenarios, onSetLeft, onSetRight, onSwap }: SliderControlsProps) {
   return (
     <div className="flex items-center gap-3">
       <div className="flex items-center gap-2">
         <span className="text-xs text-slate-500 font-medium">Left:</span>
         <select
           value={config.leftView}
-          onChange={(e) => onSetLeft(e.target.value as ViewId)}
+          onChange={(e) => onSetLeft(e.target.value)}
           className="text-sm bg-white border border-slate-200 rounded-md px-2 py-1 text-slate-700"
         >
-          {allViews.map((id) => (
-            <option key={id} value={id}>{viewLabels[id]}</option>
+          {scenarios.map((s) => (
+            <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </select>
       </div>
@@ -48,11 +40,11 @@ export function SliderControls({ config, onSetLeft, onSetRight, onSwap }: Slider
         <span className="text-xs text-slate-500 font-medium">Right:</span>
         <select
           value={config.rightView}
-          onChange={(e) => onSetRight(e.target.value as ViewId)}
+          onChange={(e) => onSetRight(e.target.value)}
           className="text-sm bg-white border border-slate-200 rounded-md px-2 py-1 text-slate-700"
         >
-          {allViews.map((id) => (
-            <option key={id} value={id}>{viewLabels[id]}</option>
+          {scenarios.map((s) => (
+            <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </select>
       </div>

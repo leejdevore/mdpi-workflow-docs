@@ -3,12 +3,12 @@
 import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import type { GhostNodeData } from '@/hooks/useOverlayData';
-import { stepTypeColors, viewColors, GHOST_OPACITY } from '@/styles/flow-theme';
+import { stepTypeColors, GHOST_OPACITY } from '@/styles/flow-theme';
 
 function GhostProcessNodeComponent({ data }: NodeProps) {
   const nodeData = data as unknown as GhostNodeData;
-  const colors = stepTypeColors[nodeData.stepType];
-  const viewColor = viewColors[nodeData.ghostViewId] ?? '#94A3B8';
+  const colors = stepTypeColors[nodeData.stepType as keyof typeof stepTypeColors] ?? stepTypeColors.manual;
+  const viewColor = nodeData.ghostViewColor ?? '#94A3B8';
 
   return (
     <div

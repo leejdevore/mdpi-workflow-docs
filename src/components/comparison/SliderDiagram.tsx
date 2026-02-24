@@ -11,29 +11,36 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import type { ViewId, WorkflowStep } from '@/data/types';
+import type { WorkflowStep as OldWorkflowStep } from '@/data/types';
+import type { Scenario, ActorDefinition, PhaseDefinition, UUID } from '@/types/workflow';
 import type { SliderConfig } from '@/types/comparison';
+import { useScenarioData } from '@/hooks/useScenarioData';
 import { useWorkflowData } from '@/hooks/useWorkflowData';
 import { useViewportSync } from '@/hooks/useViewportSync';
 import { nodeTypes, edgeTypes, sharedFlowProps } from '@/components/flow/SwimlaneDiagram';
 import { SwimlaneBackground } from '@/components/flow/SwimlaneBackground';
 import { NodeDetailPanel } from '@/components/flow/NodeDetailPanel';
 import { COLUMN_GAP } from '@/styles/flow-theme';
-import { viewColors } from '@/styles/flow-theme';
 
-const viewLabels: Record<ViewId, string> = {
-  current: 'Current State',
-  digitized: 'Digitized',
-  transformed: 'Digitally Transformed',
+const scenarioTypeColors: Record<string, string> = {
+  existing: '#EF4444',
+  digitized: '#3B82F6',
+  transformed: '#10B981',
+  custom: '#8B5CF6',
 };
 
 interface SliderDiagramProps {
   config: SliderConfig;
+  scenarios: Scenario[];
+  actors: ActorDefinition[];
+  phases: PhaseDefinition[];
   onDividerChange: (position: number) => void;
 }
 
 function SliderSide({
-  viewId,
+  scenarioId,
+  actors,
+  phases,
   side,
   viewport,
   onViewportChange,
@@ -43,7 +50,9 @@ function SliderSide({
   shouldFitView,
   onFitViewDone,
 }: {
-  viewId: ViewId;
+  scenarioId: UUID;
+  actors: ActorDefinition[];
+  phases: PhaseDefinition[];
   side: 'left' | 'right';
   viewport: { x: number; y: number; zoom: number };
   onViewportChange: (vp: { x: number; y: number; zoom: number }) => void;
@@ -53,23 +62,22 @@ function SliderSide({
   shouldFitView: boolean;
   onFitViewDone: () => void;
 }) {
-  const { nodes, edges, lanePositions } = useWorkflowData(viewId);
+  const { steps, edges: scenarioEdges } = useScenarioData(scenarioId);
+  const { nodes, edges, lanePositions, phasePositions } = useWorkflowData({ steps, edges: scenarioEdges, actors, phases });
   const { fitView } = useReactFlow();
 
-  // Fit the view on initial mount for the left side
   useEffect(() => {
-    if (shouldFitView) {
-      // Small delay to let React Flow measure the container
+    if (shouldFitView && nodes.length > 0) {
       const timer = setTimeout(() => {
         fitView({ padding: 0.1 });
         onFitViewDone();
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [shouldFitView, fitView, onFitViewDone]);
+  }, [shouldFitView, fitView, onFitViewDone, nodes.length]);
 
   const maxColumn = Math.max(
-    ...nodes.filter((n) => n.type === 'processNode').map((n) => (n.data as unknown as WorkflowStep).column ?? 0),
+    ...nodes.filter((n) => n.type === 'processNode').map((n) => (n.data as Record<string, unknown>).column as number ?? 0),
     0
   );
   const totalWidth = (maxColumn + 2) * COLUMN_GAP;
@@ -88,7 +96,7 @@ function SliderSide({
       onPaneClick={onPaneClick}
       {...controlledProps}
     >
-      <SwimlaneBackground lanePositions={lanePositions} totalWidth={totalWidth} />
+      <SwimlaneBackground lanePositions={lanePositions} phasePositions={phasePositions} totalWidth={totalWidth} />
       {showControls && (
         <>
           <Controls className="!bottom-4 !left-4" />
@@ -145,10 +153,7 @@ function SliderDivider({
       className="absolute top-0 bottom-0 z-30"
       style={{ left: `${position}%`, transform: 'translateX(-50%)' }}
     >
-      {/* Visible line */}
       <div className="absolute inset-y-0 left-1/2 w-0.5 bg-slate-500 -translate-x-1/2" />
-
-      {/* Drag handle */}
       <div
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-12 flex items-center justify-center cursor-col-resize touch-none"
         onPointerDown={handlePointerDown}
@@ -181,15 +186,15 @@ function ViewLabel({ side, label, color }: { side: 'left' | 'right'; label: stri
   );
 }
 
-export function SliderDiagram({ config, onDividerChange }: SliderDiagramProps) {
+export function SliderDiagram({ config, scenarios, actors, phases, onDividerChange }: SliderDiagramProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { viewport, handleLeftChange, handleRightChange } = useViewportSync();
-  const [selectedStep, setSelectedStep] = useState<WorkflowStep | null>(null);
+  const [selectedStep, setSelectedStep] = useState<OldWorkflowStep | null>(null);
   const [needsFitView, setNeedsFitView] = useState(true);
 
   const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     if (node.type === 'processNode') {
-      setSelectedStep(node.data as unknown as WorkflowStep);
+      setSelectedStep(node.data as unknown as OldWorkflowStep);
     }
   }, []);
 
@@ -208,6 +213,11 @@ export function SliderDiagram({ config, onDividerChange }: SliderDiagramProps) {
     setNeedsFitView(false);
   }, []);
 
+  const leftScenario = scenarios.find((s) => s.id === config.leftView);
+  const rightScenario = scenarios.find((s) => s.id === config.rightView);
+  const leftColor = scenarioTypeColors[leftScenario?.scenarioType ?? 'existing'] ?? '#64748B';
+  const rightColor = scenarioTypeColors[rightScenario?.scenarioType ?? 'existing'] ?? '#64748B';
+
   return (
     <div ref={containerRef} className="relative w-full h-full overflow-hidden">
       {/* Left view */}
@@ -217,7 +227,9 @@ export function SliderDiagram({ config, onDividerChange }: SliderDiagramProps) {
       >
         <ReactFlowProvider key={`slider-left-${config.leftView}`}>
           <SliderSide
-            viewId={config.leftView}
+            scenarioId={config.leftView}
+            actors={actors}
+            phases={phases}
             side="left"
             viewport={viewport}
             onViewportChange={handleLeftViewportChange}
@@ -237,7 +249,9 @@ export function SliderDiagram({ config, onDividerChange }: SliderDiagramProps) {
       >
         <ReactFlowProvider key={`slider-right-${config.rightView}`}>
           <SliderSide
-            viewId={config.rightView}
+            scenarioId={config.rightView}
+            actors={actors}
+            phases={phases}
             side="right"
             viewport={viewport}
             onViewportChange={handleRightChange}
@@ -260,24 +274,22 @@ export function SliderDiagram({ config, onDividerChange }: SliderDiagramProps) {
       {/* View labels */}
       <ViewLabel
         side="left"
-        label={viewLabels[config.leftView]}
-        color={viewColors[config.leftView]}
+        label={leftScenario?.name ?? 'Left'}
+        color={leftColor}
       />
       <ViewLabel
         side="right"
-        label={viewLabels[config.rightView]}
-        color={viewColors[config.rightView]}
+        label={rightScenario?.name ?? 'Right'}
+        color={rightColor}
       />
 
       {/* Detail panel */}
       {selectedStep && (
-        <>
-          <div
-            className="fixed inset-0 bg-black/20 z-40"
-            onClick={() => setSelectedStep(null)}
-          />
-          <NodeDetailPanel step={selectedStep} onClose={() => setSelectedStep(null)} />
-        </>
+        <div className="pointer-events-none fixed right-0 top-0 h-full z-50">
+          <div className="pointer-events-auto h-full">
+            <NodeDetailPanel step={selectedStep} onClose={() => setSelectedStep(null)} />
+          </div>
+        </div>
       )}
     </div>
   );
