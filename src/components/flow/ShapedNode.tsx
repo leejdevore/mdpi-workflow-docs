@@ -1,10 +1,12 @@
 'use client';
 
 import { memo } from 'react';
-import { Handle, Position, type NodeProps } from '@xyflow/react';
+import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
 import { FileText } from 'lucide-react';
 import type { NodeShape } from '@/types/workflow';
 import type { ProcessNodeData } from '@/hooks/useWorkflowData';
+
+type ProcessNodeType = Node<ProcessNodeData, 'processNode'>;
 import { useEditMode } from '@/contexts/EditModeContext';
 import { stepTypeColors, getImpactColor, getTotalImpactColor } from '@/styles/flow-theme';
 
@@ -87,17 +89,16 @@ function ImpactDot({ label, value }: { label: string; value: number }) {
   );
 }
 
-function ShapedNodeComponent({ data }: NodeProps) {
-  const nodeData = data as unknown as ProcessNodeData;
+function ShapedNodeComponent({ data }: NodeProps<ProcessNodeType>) {
   const { isEditMode } = useEditMode();
-  const shape: NodeShape = nodeData.shape ?? 'process';
-  const colors = stepTypeColors[nodeData.stepType];
+  const shape: NodeShape = data.shape ?? 'process';
+  const colors = stepTypeColors[data.stepType];
 
   const handleClass = isEditMode
     ? '!w-3 !h-3 !bg-blue-500 !border-2 !border-white'
     : '!w-2 !h-2 !bg-slate-400';
 
-  const content = <NodeContent data={nodeData} />;
+  const content = <NodeContent data={data} />;
 
   // Diamond gets 4 handles
   if (shape === 'decision') {
