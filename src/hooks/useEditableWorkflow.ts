@@ -24,6 +24,68 @@ interface WorkflowSnapshot {
   edges: Edge[];
 }
 
+// =========================================================
+// Helpers extracted from updateStep for readability
+// =========================================================
+
+/** Sync both old (actor/phase) and new (actorId/phaseId) field names */
+function normalizeStepFields(
+  data: Record<string, unknown>,
+  updates: Record<string, unknown>
+): Record<string, unknown> {
+  const merged = { ...data, ...updates };
+  const newActor = updates.actorId ?? updates.actor;
+  const newPhase = updates.phaseId ?? updates.phase;
+  if (newActor) {
+    merged.actor = newActor;
+    merged.actorId = newActor;
+  }
+  if (newPhase) {
+    merged.phase = newPhase;
+    merged.phaseId = newPhase;
+  }
+  return merged;
+}
+
+/** Build phase header nodes from the current set of process nodes */
+function rebuildPhaseHeaders(
+  processNodes: Node[],
+  phases: PhaseDefinition[]
+): Node[] {
+  const stepLikeData: WorkflowStep[] = processNodes.map((n) => {
+    const d = n.data as Record<string, unknown>;
+    return {
+      id: d.id as string,
+      versionId: d.versionId as string,
+      stepNumber: d.stepNumber as number | undefined,
+      title: d.title as string,
+      description: d.description as string,
+      actorId: (d.actorId ?? d.actor) as string,
+      phaseId: (d.phaseId ?? d.phase) as string,
+      stepType: d.stepType as WorkflowStep['stepType'],
+      column: d.column as number,
+      shape: d.shape as WorkflowStep['shape'],
+    } as WorkflowStep;
+  });
+
+  const phasePositions = getPhasePositionsFromData(stepLikeData, phases);
+
+  return phasePositions.map((phase) => ({
+    id: `phase-header-${phase.phaseId}`,
+    type: 'phaseHeader' as const,
+    position: { x: phase.x, y: 0 },
+    data: {
+      label: phase.label,
+      color: phase.color,
+      phaseWidth: phase.width,
+    } satisfies PhaseHeaderData,
+    draggable: false,
+    selectable: false,
+    connectable: false,
+    style: { width: phase.width, height: PHASE_HEADER_HEIGHT },
+  }));
+}
+
 interface UseEditableWorkflowParams {
   steps: WorkflowStep[];
   edges: WorkflowEdge[];
@@ -170,27 +232,20 @@ export function useEditableWorkflow(params: UseEditableWorkflowParams) {
       const newPhase = updates.phaseId ?? (updates as Record<string, unknown>).phase;
 
       setNodes((nds) => {
-        // First pass: update the target node's data + position
+        // Update the target node's data, position, and dimensions
         const updatedNodes = nds.map((node) => {
           if (node.id !== nodeId) return node;
-          const updatedData = { ...node.data, ...updates } as Record<string, unknown>;
-          // Keep both old (actor/phase) and new (actorId/phaseId) field names in sync
-          if (newActor) {
-            updatedData.actor = newActor;
-            updatedData.actorId = newActor;
-          }
-          if (newPhase) {
-            updatedData.phase = newPhase;
-            updatedData.phaseId = newPhase;
-          }
+
+          const updatedData = normalizeStepFields(
+            node.data as Record<string, unknown>,
+            updates as Record<string, unknown>
+          );
+
           const shape = updates.shape ?? (node.data as Record<string, unknown>).shape as string;
           const dims = shape ? shapeDimensions[shape as keyof typeof shapeDimensions] : shapeDimensions.process;
 
-          // Compute new position if actor or phase changed
           let newPosition = node.position;
-
           if (newActor && newActor !== (node.data as Record<string, unknown>).actorId) {
-            // Move node vertically to the correct lane
             const newY = getActorYForActors(newActor as string, params.actors) + PHASE_HEADER_HEIGHT;
             newPosition = { ...newPosition, y: newY };
           }
@@ -204,47 +259,11 @@ export function useEditableWorkflow(params: UseEditableWorkflowParams) {
           };
         });
 
-        // Second pass: if phase changed, rebuild phase header nodes
+        // Rebuild phase headers if phase changed
         if (newPhase) {
-          // Gather all process nodes (with updated data) to recompute phase headers
           const processNodes = updatedNodes.filter((n) => n.type === 'processNode');
-          const stepLikeData: WorkflowStep[] = processNodes.map((n) => {
-            const d = n.data as Record<string, unknown>;
-            return {
-              id: d.id as string,
-              versionId: d.versionId as string,
-              stepNumber: d.stepNumber as number | undefined,
-              title: d.title as string,
-              description: d.description as string,
-              actorId: (d.actorId ?? d.actor) as string,
-              phaseId: (d.phaseId ?? d.phase) as string,
-              stepType: d.stepType as WorkflowStep['stepType'],
-              column: d.column as number,
-              shape: d.shape as WorkflowStep['shape'],
-            } as WorkflowStep;
-          });
-
-          const newPhasePositions = getPhasePositionsFromData(stepLikeData, params.phases);
-
-          // Remove old phase header nodes
           const nonPhaseNodes = updatedNodes.filter((n) => n.type !== 'phaseHeader');
-
-          // Create new phase header nodes
-          const phaseHeaderNodes = newPhasePositions.map((phase) => ({
-            id: `phase-header-${phase.phaseId}`,
-            type: 'phaseHeader' as const,
-            position: { x: phase.x, y: 0 },
-            data: {
-              label: phase.label,
-              color: phase.color,
-              phaseWidth: phase.width,
-            } satisfies PhaseHeaderData,
-            draggable: false,
-            selectable: false,
-            connectable: false,
-            style: { width: phase.width, height: PHASE_HEADER_HEIGHT },
-          }));
-
+          const phaseHeaderNodes = rebuildPhaseHeaders(processNodes, params.phases);
           return [...phaseHeaderNodes, ...nonPhaseNodes];
         }
 
