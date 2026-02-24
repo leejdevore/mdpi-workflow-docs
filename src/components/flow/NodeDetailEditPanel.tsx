@@ -4,6 +4,8 @@ import { useState, useCallback } from 'react';
 import { X, Trash2, Plus, Minus, Save, BarChart3 } from 'lucide-react';
 import type { WorkflowStep, StepType, ActorId, ProcessPhase, ImpactScore } from '@/data/types';
 import { stepTypeColors, getImpactColor, getImpactBgColor, getTotalImpactColor } from '@/styles/flow-theme';
+import { useWorkflowContext } from '@/contexts/WorkflowContext';
+import { ActorCombobox } from '@/components/ui/ActorCombobox';
 
 interface NodeDetailEditPanelProps {
   step: WorkflowStep;
@@ -13,8 +15,6 @@ interface NodeDetailEditPanelProps {
 }
 
 const stepTypes: StepType[] = ['manual', 'automated', 'data-driven', 'hybrid'];
-const actors: ActorId[] = ['vendors', 'madigan-pm', 'madigan-dev-exec', 'madigan-exec-approval', 'ownership', 'billing-platform'];
-const phases: ProcessPhase[] = ['pre-draw', 'invoice-receipt', 'invoice-processing', 'invoice-tabulation', 'draw-assembly', 'post-approval', 'payment-check', 'payment-ach'];
 
 const impactLabels = {
   consistency: { label: 'Consistency', description: 'How often this pain point occurs (1 = infrequent, 5 = constant)' },
@@ -72,11 +72,12 @@ function ListEditor({
 }
 
 export function NodeDetailEditPanel({ step, onSave, onDelete, onClose }: NodeDetailEditPanelProps) {
+  const { actors: contextActors, phases: contextPhases } = useWorkflowContext();
   const [title, setTitle] = useState(step.title);
   const [description, setDescription] = useState(step.description);
   const [stepType, setStepType] = useState<StepType>(step.stepType);
-  const [actor, setActor] = useState<ActorId>(step.actor);
-  const [phase, setPhase] = useState<ProcessPhase>(step.phase);
+  const [actor, setActor] = useState<string>(step.actor);
+  const [phase, setPhase] = useState<string>(step.phase);
   const [stepNumber, setStepNumber] = useState(step.stepNumber ?? 0);
   const [documents, setDocuments] = useState<string[]>(step.documents ?? []);
   const [painPoints, setPainPoints] = useState<string[]>(step.painPoints ?? []);
@@ -97,8 +98,8 @@ export function NodeDetailEditPanel({ step, onSave, onDelete, onClose }: NodeDet
       title: title.trim(),
       description: description.trim(),
       stepType,
-      actor,
-      phase,
+      actor: actor as ActorId,
+      phase: phase as ProcessPhase,
       stepNumber: stepNumber || undefined,
       documents: documents.filter(Boolean),
       painPoints: painPoints.filter(Boolean),
@@ -232,25 +233,21 @@ export function NodeDetailEditPanel({ step, onSave, onDelete, onClose }: NodeDet
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-sm font-semibold text-slate-700 mb-1 block">Actor</label>
-            <select
+            <ActorCombobox
+              actors={contextActors}
               value={actor}
-              onChange={(e) => setActor(e.target.value as ActorId)}
-              className="w-full text-sm border border-slate-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
-            >
-              {actors.map((a) => (
-                <option key={a} value={a}>{a.replace(/-/g, ' ')}</option>
-              ))}
-            </select>
+              onChange={(id) => setActor(id)}
+            />
           </div>
           <div>
             <label className="text-sm font-semibold text-slate-700 mb-1 block">Phase</label>
             <select
               value={phase}
-              onChange={(e) => setPhase(e.target.value as ProcessPhase)}
+              onChange={(e) => setPhase(e.target.value)}
               className="w-full text-sm border border-slate-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
             >
-              {phases.map((p) => (
-                <option key={p} value={p}>{p.replace(/-/g, ' ')}</option>
+              {contextPhases.map((p) => (
+                <option key={p.id} value={p.id}>{p.label}</option>
               ))}
             </select>
           </div>

@@ -33,6 +33,7 @@ import {
   saveVersionData,
   deleteWorkflow as apiDeleteWorkflow,
   deleteScenario as apiDeleteScenario,
+  updateWorkflow as apiUpdateWorkflow,
 } from '@/lib/supabase/queries';
 
 // =========================================================
@@ -70,6 +71,10 @@ interface WorkflowContextValue {
   removeWorkflow: (id: UUID) => Promise<void>;
   addScenario: (workflowId: UUID, name: string, type: ScenarioType, order: number) => Promise<UUID>;
   removeScenario: (id: UUID) => Promise<void>;
+
+  // Update workflow metadata
+  updateActors: (actors: ActorDefinition[]) => Promise<void>;
+  updatePhases: (phases: PhaseDefinition[]) => Promise<void>;
 
   // Save version data
   saveData: (steps: WorkflowStep[], edges: WorkflowEdge[]) => Promise<void>;
@@ -267,6 +272,25 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     [refreshTree, selection, activeScenarios, selectScenarioInternal]
   );
 
+  // --- Update workflow metadata ---
+  const updateActors = useCallback(
+    async (newActors: ActorDefinition[]) => {
+      if (!selection?.workflowId) return;
+      const updated = await apiUpdateWorkflow(selection.workflowId, { actors: newActors });
+      setActiveWorkflow(updated);
+    },
+    [selection]
+  );
+
+  const updatePhases = useCallback(
+    async (newPhases: PhaseDefinition[]) => {
+      if (!selection?.workflowId) return;
+      const updated = await apiUpdateWorkflow(selection.workflowId, { phases: newPhases });
+      setActiveWorkflow(updated);
+    },
+    [selection]
+  );
+
   // --- Save ---
   const saveData = useCallback(
     async (newSteps: WorkflowStep[], newEdges: WorkflowEdge[]) => {
@@ -296,6 +320,8 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     removeWorkflow,
     addScenario,
     removeScenario,
+    updateActors,
+    updatePhases,
     saveData,
     refreshTree,
   };

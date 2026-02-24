@@ -247,7 +247,27 @@ export async function insertEdges(edges: WorkflowEdge[]): Promise<WorkflowEdge[]
 }
 
 // =========================================================
-// Update operations
+// Update workflow metadata
+// =========================================================
+
+export async function updateWorkflow(
+  workflowId: UUID,
+  updates: { actors?: ActorDefinition[]; phases?: PhaseDefinition[]; name?: string; description?: string }
+): Promise<Workflow> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('workflows')
+    .update(updates)
+    .eq('id', workflowId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return toWorkflow(data);
+}
+
+// =========================================================
+// Update version data
 // =========================================================
 
 /** Save all steps for a version (delete existing + reinsert) */

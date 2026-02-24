@@ -104,7 +104,7 @@ function ShapedNodeComponent({ data }: NodeProps) {
       <div className="w-full h-full">
         <Handle type="target" position={Position.Left} className={handleClass} />
         <Handle type="target" position={Position.Top} id="top" className={handleClass} />
-        <DiamondShape borderColor={colors.border}>{content}</DiamondShape>
+        <DiamondShape bgColor={colors.bg} borderColor={colors.border}>{content}</DiamondShape>
         <Handle type="source" position={Position.Right} className={handleClass} />
         <Handle type="source" position={Position.Bottom} id="bottom" className={handleClass} />
       </div>
