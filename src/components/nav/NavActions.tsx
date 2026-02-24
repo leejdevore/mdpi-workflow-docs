@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Users, Columns3, FileDown } from 'lucide-react';
+import { Plus, Users, Columns3, FileDown, Bot } from 'lucide-react';
 import { NavNewWorkflowDialog } from './NavNewWorkflowDialog';
 import { ActorManagementPanel } from './ActorManagementPanel';
 import { PhaseManagementPanel } from './PhaseManagementPanel';
 import { ExportPanel } from './ExportPanel';
+import { AgentPanel } from '@/components/agent/AgentPanel';
 import { useWorkflowContext } from '@/contexts/WorkflowContext';
 
 export function NavActions() {
@@ -13,6 +14,7 @@ export function NavActions() {
   const [showActorPanel, setShowActorPanel] = useState(false);
   const [showPhasePanel, setShowPhasePanel] = useState(false);
   const [showExportPanel, setShowExportPanel] = useState(false);
+  const [showAgentPanel, setShowAgentPanel] = useState(false);
   const { activeWorkflow } = useWorkflowContext();
 
   return (
@@ -40,6 +42,13 @@ export function NavActions() {
             <FileDown className="w-4 h-4" />
             Export to Markdown
           </button>
+          <button
+            onClick={() => setShowAgentPanel(true)}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 rounded-md hover:bg-slate-50 hover:text-slate-800 transition-colors"
+          >
+            <Bot className="w-4 h-4" />
+            AI Agent
+          </button>
         </>
       )}
 
@@ -65,6 +74,10 @@ export function NavActions() {
 
       {showExportPanel && (
         <ExportPanel onClose={() => setShowExportPanel(false)} />
+      )}
+
+      {showAgentPanel && (
+        <AgentPanel onClose={() => setShowAgentPanel(false)} />
       )}
     </div>
   );
