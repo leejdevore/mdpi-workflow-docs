@@ -14,8 +14,10 @@ import {
 import type { WorkflowStep, WorkflowEdge, ActorDefinition, PhaseDefinition } from '@/types/workflow';
 import { useWorkflowData } from './useWorkflowData';
 import { useUndoRedo } from './useUndoRedo';
-import { shapeDimensions } from '@/styles/flow-theme';
-import { getActorForYFromActors } from '@/lib/swimlane-positions';
+import { shapeDimensions, PHASE_HEADER_HEIGHT, COLUMN_GAP } from '@/styles/flow-theme';
+import { getActorForYFromActors, getActorYForActors } from '@/lib/swimlane-positions';
+import { getPhasePositionsFromData } from '@/lib/phase-positions';
+import type { PhaseHeaderData } from '@/components/flow/PhaseHeaderNode';
 
 interface WorkflowSnapshot {
   nodes: Node[];
@@ -163,13 +165,16 @@ export function useEditableWorkflow(params: UseEditableWorkflowParams) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (nodeId: string, updates: Partial<WorkflowStep> | Record<string, any>) => {
       takeSnapshot();
-      setNodes((nds) =>
-        nds.map((node) => {
+
+      const newActor = updates.actorId ?? (updates as Record<string, unknown>).actor;
+      const newPhase = updates.phaseId ?? (updates as Record<string, unknown>).phase;
+
+      setNodes((nds) => {
+        // First pass: update the target node's data + position
+        const updatedNodes = nds.map((node) => {
           if (node.id !== nodeId) return node;
           const updatedData = { ...node.data, ...updates } as Record<string, unknown>;
           // Keep both old (actor/phase) and new (actorId/phaseId) field names in sync
-          const newActor = updates.actorId ?? (updates as Record<string, unknown>).actor;
-          const newPhase = updates.phaseId ?? (updates as Record<string, unknown>).phase;
           if (newActor) {
             updatedData.actor = newActor;
             updatedData.actorId = newActor;
@@ -180,16 +185,73 @@ export function useEditableWorkflow(params: UseEditableWorkflowParams) {
           }
           const shape = updates.shape ?? (node.data as Record<string, unknown>).shape as string;
           const dims = shape ? shapeDimensions[shape as keyof typeof shapeDimensions] : shapeDimensions.process;
+
+          // Compute new position if actor or phase changed
+          let newPosition = node.position;
+
+          if (newActor && newActor !== (node.data as Record<string, unknown>).actorId) {
+            // Move node vertically to the correct lane
+            const newY = getActorYForActors(newActor as string, params.actors) + PHASE_HEADER_HEIGHT;
+            newPosition = { ...newPosition, y: newY };
+          }
+
           return {
             ...node,
             type: 'processNode',
             data: updatedData,
+            position: newPosition,
             style: { width: dims?.width ?? 220, height: dims?.height ?? 100 },
           };
-        })
-      );
+        });
+
+        // Second pass: if phase changed, rebuild phase header nodes
+        if (newPhase) {
+          // Gather all process nodes (with updated data) to recompute phase headers
+          const processNodes = updatedNodes.filter((n) => n.type === 'processNode');
+          const stepLikeData: WorkflowStep[] = processNodes.map((n) => {
+            const d = n.data as Record<string, unknown>;
+            return {
+              id: d.id as string,
+              versionId: d.versionId as string,
+              stepNumber: d.stepNumber as number | undefined,
+              title: d.title as string,
+              description: d.description as string,
+              actorId: (d.actorId ?? d.actor) as string,
+              phaseId: (d.phaseId ?? d.phase) as string,
+              stepType: d.stepType as WorkflowStep['stepType'],
+              column: d.column as number,
+              shape: d.shape as WorkflowStep['shape'],
+            } as WorkflowStep;
+          });
+
+          const newPhasePositions = getPhasePositionsFromData(stepLikeData, params.phases);
+
+          // Remove old phase header nodes
+          const nonPhaseNodes = updatedNodes.filter((n) => n.type !== 'phaseHeader');
+
+          // Create new phase header nodes
+          const phaseHeaderNodes = newPhasePositions.map((phase) => ({
+            id: `phase-header-${phase.phaseId}`,
+            type: 'phaseHeader' as const,
+            position: { x: phase.x, y: 0 },
+            data: {
+              label: phase.label,
+              color: phase.color,
+              phaseWidth: phase.width,
+            } satisfies PhaseHeaderData,
+            draggable: false,
+            selectable: false,
+            connectable: false,
+            style: { width: phase.width, height: PHASE_HEADER_HEIGHT },
+          }));
+
+          return [...phaseHeaderNodes, ...nonPhaseNodes];
+        }
+
+        return updatedNodes;
+      });
     },
-    [setNodes, takeSnapshot]
+    [setNodes, takeSnapshot, params.actors, params.phases]
   );
 
   const deleteStep = useCallback(

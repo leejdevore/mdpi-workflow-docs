@@ -1,26 +1,37 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Users } from 'lucide-react';
+import { Plus, Users, Columns3 } from 'lucide-react';
 import { NavNewWorkflowDialog } from './NavNewWorkflowDialog';
 import { ActorManagementPanel } from './ActorManagementPanel';
+import { PhaseManagementPanel } from './PhaseManagementPanel';
 import { useWorkflowContext } from '@/contexts/WorkflowContext';
 
 export function NavActions() {
   const [showNewWorkflow, setShowNewWorkflow] = useState(false);
   const [showActorPanel, setShowActorPanel] = useState(false);
+  const [showPhasePanel, setShowPhasePanel] = useState(false);
   const { activeWorkflow } = useWorkflowContext();
 
   return (
     <div className="border-t border-slate-100 p-3 space-y-1">
       {activeWorkflow && (
-        <button
-          onClick={() => setShowActorPanel(true)}
-          className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 rounded-md hover:bg-slate-50 hover:text-slate-800 transition-colors"
-        >
-          <Users className="w-4 h-4" />
-          Manage Lanes
-        </button>
+        <>
+          <button
+            onClick={() => setShowActorPanel(true)}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 rounded-md hover:bg-slate-50 hover:text-slate-800 transition-colors"
+          >
+            <Users className="w-4 h-4" />
+            Manage Lanes
+          </button>
+          <button
+            onClick={() => setShowPhasePanel(true)}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 rounded-md hover:bg-slate-50 hover:text-slate-800 transition-colors"
+          >
+            <Columns3 className="w-4 h-4" />
+            Manage Phases
+          </button>
+        </>
       )}
 
       <button
@@ -37,6 +48,10 @@ export function NavActions() {
 
       {showActorPanel && (
         <ActorManagementPanel onClose={() => setShowActorPanel(false)} />
+      )}
+
+      {showPhasePanel && (
+        <PhaseManagementPanel onClose={() => setShowPhasePanel(false)} />
       )}
     </div>
   );
