@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
+import { ChevronLeft, ChevronRight, Camera } from 'lucide-react';
 import { NavWorkflowTree } from './NavWorkflowTree';
 import { NavActions } from './NavActions';
 
@@ -40,6 +41,15 @@ export function LeftNav() {
           <div className="flex-1 overflow-y-auto">
             <NavWorkflowTree />
           </div>
+
+          {/* Captures link */}
+          <Link
+            href="/captures"
+            className="flex items-center gap-2 mx-3 mb-2 px-3 py-2 text-xs font-medium text-slate-600 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+          >
+            <Camera className="h-3.5 w-3.5" />
+            Captures
+          </Link>
 
           {/* Actions */}
           <NavActions />
